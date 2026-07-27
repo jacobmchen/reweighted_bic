@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 from scipy.special import expit
@@ -8,7 +9,6 @@ class LinearRegression():
     """
     Class for a simple linear regression using gradient descent
     """
-
     def __init__(self, learning_rate=0.1, weights=[]):
         """
         Constructor for the class. The learning rate specifies how
@@ -115,7 +115,7 @@ class LinearRegression():
                 update *= self.weights[i]
             error_variance += update
         error_variance = 1/n * error_variance
-        self.bic = n * np.log(error_variance) + d * np.log(n)
+        self.bic = n * np.log(error_variance) + d * n**(1/2+0.001)
 
     def params(self):
         return self.theta
@@ -185,8 +185,8 @@ class LinearRegressionALASSO(LinearRegression):
 
     Adaptive LASSO is a two-stage procedure where the first stage is to fit
     a regular linear regression and the second stage is to fit a regression with
-    the penalty. The derivative of the penalty term is \lambda * \omega * sgn(theta)
-    where \lambda is a prespecified hyperparameter and \omega is the reciprocal of the
+    the penalty. The derivative of the penalty term is lambda * omega * sgn(theta)
+    where lambda is a prespecified hyperparameter and omega is the reciprocal of the
     absolute value of the coefficient learned in the regular linear regression.
 
     There is technically another parameter here gamma that dictates the value of omega
@@ -252,17 +252,30 @@ def generate_data(n, coef, confounding=True):
     """
     # define a baseline confounder
     C = np.random.normal(0, 1, n)
+    C2 = np.random.normal(1, 5, n)
     
-    A1 = np.random.binomial(1, expit(C), n)
-    A2 = np.random.binomial(1, expit(C), n)
-    A3 = np.random.binomial(1, expit(C), n)
+    # define the oracle propensity scores
+    p_A1 = expit(C)
+    p_A2 = expit(C)
+    p_A3 = expit(C)
+
+    # generate treatment variables
+    A1 = np.random.binomial(1, p_A1, n)
+    A2 = np.random.binomial(1, p_A2, n)
+    A3 = np.random.binomial(1, p_A3, n)
+    # add an intercept term
     intercept = np.ones(n)
+
+    # generate Y based on whether we want confounding
+    # A1 and A3 are true causes while A2 is not
     if confounding == True:
         Y = coef*C + coef*A1 + 0*A2 + coef*A3 + np.random.normal(0, 1, n)
     else:
         Y = coef*A1 + 0*A2 + coef*A3 + np.random.normal(0, 1, n)
 
-    df = pd.DataFrame({'C': C, 'A1': A1, 'A2': A2, 'A3': A3, 'int':intercept, 'Y': Y})
+    # create the dataframe, which includes the ground-truth weights
+    df = pd.DataFrame({'C': C, 'C2': C2, 'A1': A1, 'A2': A2, 'A3': A3, 'int': intercept, 'Y': Y,
+                       'p_A1':p_A1, 'p_A2':p_A2, 'p_A3':p_A3})
 
     return df
 
@@ -270,24 +283,47 @@ def compute_weights(df):
     """
     Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C)
     """
+    # get the matrix of confounders
     Xmat = np.array([df['C']]).T
+    Xmat_wrong = np.array([df['C2']]).T
 
+    # learn the propensity score for A1
     Y = df['A1']
-    model_A1 = LogisticRegression(penalty=None).fit(Xmat, Y)
+    # C=np.inf makes sure that the logistic regression doesn't use
+    # a penalty term
+    model_A1 = LogisticRegression(C=np.inf).fit(Xmat, Y)
     A1_weights = model_A1.predict_proba(Xmat)[:,1]
 
     Y = df['A2']
-    model_A2 = LogisticRegression(penalty=None).fit(Xmat, Y)
+    model_A2 = LogisticRegression(C=np.inf).fit(Xmat, Y)
     A2_weights = model_A2.predict_proba(Xmat)[:,1]
     
     Y = df['A3']
-    model_A3 = LogisticRegression(penalty=None).fit(Xmat, Y)
+    model_A3 = LogisticRegression(C=np.inf).fit(Xmat, Y)
     A3_weights = model_A3.predict_proba(Xmat)[:,1]
 
     # calculate the weights as a product of the three weights
     weights = (df['A1'] * A1_weights + (1-df['A1']) * (1-A1_weights)) \
                 * (df['A2'] * A2_weights + (1-df['A2']) * (1-A2_weights)) \
                 * (df['A3'] * A3_weights + (1-df['A3']) * (1-A3_weights))
+    
+    # we want the inverse weights
+    weights = 1 / weights
+
+    # standardize the weights
+    weights_stand = weights / np.mean(weights)
+
+    return weights_stand
+
+def compute_oracle_weights(df):
+    """
+    Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C) using
+    the oracle probabilities of getting assigned treatment.
+    """
+    # calculate the weights as a product of the three weights
+    weights = (df['A1'] * df['p_A1'] + (1-df['A1']) * (1-df['p_A1'])) \
+                * (df['A2'] * df['p_A2'] + (1-df['A2']) * (1-df['p_A2'])) \
+                * (df['A3'] * df['p_A3'] + (1-df['A3']) * (1-df['p_A3']))
     
     # we want the inverse weights
     weights = 1 / weights
@@ -356,7 +392,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     For the BIC score, we perform a forward search then a backward search
     to see which variables to include in the regression.
 
-    The penalized_threshold dictates how small in absolute value a coefficient
+    The parameter penalized_threshold dictates how small in absolute value a coefficient
     needs to be to be considered as 0. This method is used in Jaman, et al.
     """
     # get the sample size
@@ -442,6 +478,75 @@ if __name__ == "__main__":
     # set the seed
     np.random.seed(0)
 
+    diffs = []
+    bic_comp_ora = []
+    bic_comp_est = []
+    sample_sizes = [50, 500, 5000]
+
+    # see if can find DGP such that log n as penalty term
+    # doesn't work, but sqrt(n) as penalty term works
+    for size in sample_sizes:
+        df = generate_data(size, 1.5, confounding=True)
+
+        est_weights = compute_weights(df)
+        ora_weights = compute_oracle_weights(df)
+
+        rmse = np.sqrt(np.mean((est_weights - ora_weights)**2))
+        print('weights rmse', rmse)
+
+        A = -0.9 * np.sum(est_weights - ora_weights)
+        print('A', A)
+
+        ora_model = LinearRegression(weights=ora_weights)
+        # fit a model with all terms
+        Xmat = np.array(df[['A1']])
+        Y = df['Y']
+        ora_model.fit(Xmat, Y)
+
+        # get the bic score of the model
+        ora_model_score = ora_model.compute_bic()
+
+        # fit a model with all terms
+        Xmat = np.array(df[['A1', 'A2']])
+        Y = df['Y']
+        ora_model.fit(Xmat, Y)
+
+        # get the bic score of the model
+        ora_model_score2 = ora_model.compute_bic()
+
+        print('bic_comp_ora', ora_model_score - ora_model_score2)
+        bic_comp_ora.append(ora_model_score - ora_model_score2)
+
+        est_model = LinearRegression(weights=est_weights)
+        # fit a model with all terms
+        Xmat = np.array(df[['A1']])
+        Y = df['Y']
+        est_model.fit(Xmat, Y)
+
+        # get the bic score of the model
+        est_model_score = est_model.compute_bic()
+
+        # fit a model with all terms
+        Xmat = np.array(df[['A1', 'A2']])
+        Y = df['Y']
+        est_model.fit(Xmat, Y)
+
+        # get the bic score of the model
+        est_model_score2 = est_model.compute_bic()
+
+        print('bic_comp_est', est_model_score - est_model_score2)
+        bic_comp_est.append(est_model_score - est_model_score2)
+
+        print('weights diff', est_model_score - ora_model_score)
+        diffs.append(est_model_score - ora_model_score - A)
+
+    print('sample sizes', sample_sizes)
+    print('oracle bic comp', bic_comp_ora)
+    print('estimated bic comp', bic_comp_est)
+    print('oracle and estimated bic comp', diffs)
+
+    sys.exit()
+    
     # set number of iterations for experiments
     num_experiments = 100
     # define the number of samples
