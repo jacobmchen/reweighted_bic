@@ -88,7 +88,7 @@ def compute_oracle_weights(df):
 
     return weights_stand
 
-def bic_select_model(df, weights):
+def bic_select_model(df, weights, bic_penalty):
     """
     Use the BIC score to select a model using a forward search then
     a backward search.
@@ -103,7 +103,7 @@ def bic_select_model(df, weights):
     cur_model = []
 
     for coef in possible_coefs:
-        model = LinearRegression(weights=weights)
+        model = LinearRegression(weights=weights, penalty=bic_penalty)
         # fit a model with the current model, the current coefficient,
         # and the intercept term
         Xmat = np.array(df[cur_model + [coef] + ['int']])
@@ -121,7 +121,7 @@ def bic_select_model(df, weights):
     # keep track of the coefficients that we are removing
     to_remove = []
     for coef in cur_model:
-        model = LinearRegression(weights=weights)
+        model = LinearRegression(weights=weights, penalty=bic_penalty)
         # fit a model with the current model, without the coefficient to try
         # removing, and without the coefficients we decided to remove
         Xmat = np.array(df[list(set(cur_model) - set(to_remove) - set([coef])) + ['int']])

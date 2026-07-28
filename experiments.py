@@ -78,16 +78,34 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights)
+    selected_model = bic_select_model(df, weights, lambda n: np.log(n))
     if verbose:
-        print('selected bic model:\n', selected_model)
+        print('selected bic model, log n penalty:\n', selected_model)
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct = True
 
+    bic_correct_half = False
+    # use the BIC score method to select a model
+    selected_model = bic_select_model(df, weights, lambda n: n**(1/2))
+    if verbose:
+        print('selected bic model, n^(1/2) penalty:\n', selected_model)
+    # verify if BIC selected the right model
+    if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
+        bic_correct_half = True
+
+    bic_correct_three_fourths = False
+    # use the BIC score method to select a model
+    selected_model = bic_select_model(df, weights, lambda n: n**(3/4))
+    if verbose:
+        print('selected bic model, n^(3/4) penalty:\n', selected_model)
+    # verify if BIC selected the right model
+    if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
+        bic_correct_three_fourths = True
+
     print()
 
-    return (regression_correct, penalized_correct, alasso_correct, bic_correct)
+    return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths)
 
 def compare_weights():
     """
@@ -183,6 +201,8 @@ if __name__ == "__main__":
     scad_correct = 0
     alasso_correct = 0
     bic_correct = 0
+    bic_correct_half = 0
+    bic_correct_three_fourths = 0
 
     # set a flag for whether we are running the experiments with confounding
     run_with_confounding = True
@@ -212,9 +232,18 @@ if __name__ == "__main__":
         if results[3] == True:
             bic_correct += 1
 
+        if results[4] == True:
+            bic_correct_half += 1
+
+        if results[5] == True:
+            bic_correct_three_fourths += 1
+
+
     # print out the experimental results
     print('linear percentage:', linear_correct/num_experiments)
     print('scad percentage:', scad_correct/num_experiments)
     print('alasso percentage:', alasso_correct/num_experiments)
-    print('bic percentage:', bic_correct/num_experiments)
+    print('bic percentage, log n penalty:', bic_correct/num_experiments)
+    print('bic percentage, n^(1/2) penalty:', bic_correct_half/num_experiments)
+    print('bic percentage, n^(3/4) penalty:', bic_correct_three_fourths/num_experiments)
 

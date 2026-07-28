@@ -217,7 +217,8 @@ class LinearRegressionALASSO(LinearRegression):
     absolute value of the coefficient learned in the regular linear regression.
 
     There is technically another parameter here gamma that dictates the value of omega
-    as follows: omega = 1 / abs(param)^gamma. Here, we just use gamma=1.
+    as follows: omega = 1 / abs(param)^gamma. Here, we just use gamma=2. This choice
+    of gamma allows for the choice of lambda_n=n^(-1/4).
 
     To get oracle properties, lambda_n/n^(1/2) -> 0 and lambda_n*n^((gamma-1)/2) -> infty
     """
@@ -231,7 +232,7 @@ class LinearRegressionALASSO(LinearRegression):
         ols_params = ols_model.params()
         self.omega = []
         for param in ols_params:
-            self.omega.append( 1 / abs(param) )
+            self.omega.append( 1 / abs(param)**2 )
 
     def _calculate_gradient(self, Xmat, Y, theta_t):
         """
