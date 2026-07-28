@@ -1,388 +1,5 @@
-import sys
-import numpy as np
-import pandas as pd
-from scipy.special import expit
-from sklearn.linear_model import LogisticRegression
-# from sklearn.linear_model import LinearRegression
-
-class LinearRegression():
-    """
-    Class for a simple linear regression using gradient descent
-    """
-    def __init__(self, learning_rate=0.1, weights=[]):
-        """
-        Constructor for the class. The learning rate specifies how
-        quickly we move at each iteration of updating the derivative.
-        The weights are for a reweighted regression. If the weights
-        are None, then fit a regular regression.
-        """
-        self.learning_rate = learning_rate
-        self.theta = None
-        self.bic = 0
-        self.weights = weights
-
-    def _calculate_gradient(self, Xmat, Y, theta_t):
-        """
-        Private function for computing the gradient.
-        Xmat is a numpy matrix and Y is a numpy array.
-        theta_t represents the current values of the coefficients in the
-        regression and is also a numpy array.
-        """
-        # get dimensions of the matrix
-        n, d = Xmat.shape
-
-        # set up the gradient for each coefficient
-        grad_vec = np.zeros(d)
-
-        # calculate the predictions Y_hat at the current values of theta
-        Y_hat = np.matmul(Xmat, theta_t)
-
-        # we are using the mean squared error as the loss function, therefore
-        # dL/d(theta_i) = - 2/n \sum_i=1^n (Y_i - Y_hat_i)X_ij
-
-        # for each coefficient that we are fitting
-        for j in range(d):
-            # compute the gradient for that vector
-            gradient = 0
-            # for each row of data
-            for i in range(n):
-                # calculate the partial derivative for coefficient j
-                # at row i
-                gradient_update = (Y[i] - Y_hat[i])*Xmat[i][j]
-                if len(self.weights) > 0:
-                    # if we have weights, then multiply them onto the update
-                    gradient_update = gradient_update * self.weights[i]
-                # update the gradient
-                gradient = gradient + gradient_update
-            gradient = gradient * -2 / n
-            grad_vec[j] = gradient
-
-        return grad_vec
-
-    def fit(self, Xmat, Y, max_iterations=1000, tolerance=1e-6, verbose=False):
-        """
-        Fit a linear regression using gradient descent. The tolerance specifies
-        the difference at which we will terminate the program since the theta's
-        are not changing anymore.
-        """
-        # get dimensions of the matrix
-        n, d = Xmat.shape
-
-        # self.theta = np.matmul(np.matmul(np.linalg.inv(np.matmul(Xmat.T, Xmat)), Xmat.T), Y)
-        #
-        # initialize guesses for the thetas randomly
-        theta = np.random.uniform(-5, 5, d)
-        theta_new = np.random.uniform(-5, 5, d)
-
-        # initialize an iteration counter
-        iteration = 0
-
-        while iteration < max_iterations:
-            # calculate the gradients at the current theta
-            grad_vec = self._calculate_gradient(Xmat, Y, theta)
-
-            # update the thetas that we have learned using the gradients
-            theta_new = theta - self.learning_rate*grad_vec
-
-            # check if we have achieved our tolerance
-            tolerance_achieved = True
-            difference = theta_new - theta
-            for i in range(d):
-                if abs(difference[i]) > tolerance:
-                    tolerance_achieved = False
-                    # there is at least one theta that is still far away
-                    break
-
-            # we have achieved our tolerance, so exit gradient descent
-            if tolerance_achieved:
-                break
-
-            # update the old theta
-            theta = theta_new.copy()
-
-            # update the iteration count
-            iteration += 1
-
-        # update the attribute theta
-        self.theta = theta.copy()
-
-        # compute the BIC score
-        Y_hat = np.matmul(Xmat, self.theta)
-        error_variance = 0
-        for i in range(n):
-            update = (Y_hat[i] - Y[i])**2
-            if len(self.weights) > 0:
-                update *= self.weights[i]
-            error_variance += update
-        error_variance = 1/n * error_variance
-        self.bic = n * np.log(error_variance) + d * n**(1/2+0.001)
-
-    def params(self):
-        return self.theta
-
-    def compute_bic(self):
-        # return the BIC score, which was computed at fit
-        return self.bic
-
-class LinearRegressionSCAD(LinearRegression):
-    """
-    Class for linear regression with the SCAD penalty.
-
-    The choice for the parameter a=3.7 is numerically shown to be good.
-    To get oracle properties, lambda must satisfy lambda_n -> 0 and n^(1/2)*lambda_n -> infty
-    """
-    def __init__(self, learning_rate=0.01, weights=[], lambdaa=0.1, a=3.7):
-        super().__init__(learning_rate, weights)
-        self.lambdaa=lambdaa
-        self.a=a
-
-    def _calculate_gradient(self, Xmat, Y, theta_t):
-        """
-        Private function for computing the gradient with the SCAD penalty.
-        Xmat is a numpy matrix and Y is a numpy array.
-        theta_t represents the current values of the coefficients in the
-        regression and is also a numpy array.
-        """
-        # get dimensions of the matrix
-        n, d = Xmat.shape
-
-        # set up the gradient for each coefficient
-        grad_vec = np.zeros(d)
-
-        # calculate the predictions Y_hat at the current values of theta
-        Y_hat = np.matmul(Xmat, theta_t)
-
-        # we are using the mean squared error as the loss function, therefore
-        # dL/d(theta_i) = - 2/n \sum_i=1^n (Y_i - Y_hat_i)X_ij
-
-        # for each coefficient that we are fitting
-        for j in range(d):
-            # compute the gradient for that vector
-            gradient = 0
-            # for each row of data
-            for i in range(n):
-                gradient_update = (Y[i] - Y_hat[i])*Xmat[i][j]
-                if len(self.weights) > 0:
-                    # if we have weights, then use them
-                    gradient_update = gradient_update * self.weights[i]
-                gradient = gradient + gradient_update
-            gradient = gradient * -2/n
-
-            # add the SCAD penalty
-            sgn_theta_t = 1 if theta_t[j] > 0 else -1
-            if abs(theta_t[j]) <= self.lambdaa:
-                gradient += self.lambdaa * sgn_theta_t
-            elif abs(theta_t[j]) > self.lambdaa and abs(theta_t[j]) <= (self.a*self.lambdaa):
-                gradient += (self.a*self.lambdaa - abs(theta_t[j]))/(self.a-1) * sgn_theta_t
-
-            grad_vec[j] = gradient
-
-        return grad_vec
-
-class LinearRegressionALASSO(LinearRegression):
-    """
-    Class for the adaptive LASSO linear regression.
-
-    Adaptive LASSO is a two-stage procedure where the first stage is to fit
-    a regular linear regression and the second stage is to fit a regression with
-    the penalty. The derivative of the penalty term is lambda * omega * sgn(theta)
-    where lambda is a prespecified hyperparameter and omega is the reciprocal of the
-    absolute value of the coefficient learned in the regular linear regression.
-
-    There is technically another parameter here gamma that dictates the value of omega
-    as follows: omega = 1 / abs(param)^gamma. Here, we just use gamma=1.
-
-    To get oracle properties, lambda_n/n^(1/2) -> 0 and lambda_n*n^((gamma-1)/2) -> infty
-    """
-    def __init__(self, Xmat, Y, learning_rate=0.01, weights=[], lambdaa=0.1):
-        super().__init__(learning_rate, weights)
-        self.lambdaa=lambdaa
-        # use Xmat and Y to fit a regular linear regression and set the weights
-        # omega
-        ols_model = LinearRegression(weights=self.weights)
-        ols_model.fit(Xmat, Y)
-        ols_params = ols_model.params()
-        self.omega = []
-        for param in ols_params:
-            self.omega.append( 1 / abs(param) )
-
-    def _calculate_gradient(self, Xmat, Y, theta_t):
-        """
-        Private function for computing the gradient with the ALASSO penalty.
-        Xmat is a numpy matrix and Y is a numpy array.
-        theta_t represents the current values of the coefficients in the
-        regression and is also a numpy array.
-        """
-        # get dimensions of the matrix
-        n, d = Xmat.shape
-
-        # set up the gradient for each coefficient
-        grad_vec = np.zeros(d)
-
-        # calculate the predictions Y_hat at the current values of theta
-        Y_hat = np.matmul(Xmat, theta_t)
-
-        # we are using the mean squared error as the loss function, therefore
-        # dL/d(theta_i) = - 2/n \sum_i=1^n (Y_i - Y_hat_i)X_ij
-
-        # for each coefficient that we are fitting
-        for j in range(d):
-            # compute the gradient for that vector
-            gradient = 0
-            # for each row of data
-            for i in range(n):
-                gradient_update = (Y[i] - Y_hat[i])*Xmat[i][j]
-                if len(self.weights) > 0:
-                    # if we have weights, then use them
-                    gradient_update = gradient_update * self.weights[i]
-                gradient = gradient + gradient_update
-            gradient = gradient * -2/n
-
-            # add the adaptive LASSO penalty
-            sgn_theta_t = 1 if theta_t[j] > 0 else -1
-            gradient += self.lambdaa * self.omega[j] * sgn_theta_t
-            grad_vec[j] = gradient
-
-        return grad_vec
-
-def generate_data(n, coef, confounding=True):
-    """
-    Function for generating data, need to specify the sample size.
-    coef specifies the strength of the dependency of Y on variables.
-    """
-    # define a baseline confounder
-    C = np.random.normal(0, 1, n)
-    C2 = np.random.normal(1, 5, n)
-    
-    # define the oracle propensity scores
-    p_A1 = expit(C)
-    p_A2 = expit(C)
-    p_A3 = expit(C)
-
-    # generate treatment variables
-    A1 = np.random.binomial(1, p_A1, n)
-    A2 = np.random.binomial(1, p_A2, n)
-    A3 = np.random.binomial(1, p_A3, n)
-    # add an intercept term
-    intercept = np.ones(n)
-
-    # generate Y based on whether we want confounding
-    # A1 and A3 are true causes while A2 is not
-    if confounding == True:
-        Y = coef*C + coef*A1 + 0*A2 + coef*A3 + np.random.normal(0, 1, n)
-    else:
-        Y = coef*A1 + 0*A2 + coef*A3 + np.random.normal(0, 1, n)
-
-    # create the dataframe, which includes the ground-truth weights
-    df = pd.DataFrame({'C': C, 'C2': C2, 'A1': A1, 'A2': A2, 'A3': A3, 'int': intercept, 'Y': Y,
-                       'p_A1':p_A1, 'p_A2':p_A2, 'p_A3':p_A3})
-
-    return df
-
-def compute_weights(df):
-    """
-    Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C)
-    """
-    # get the matrix of confounders
-    Xmat = np.array([df['C']]).T
-    Xmat_wrong = np.array([df['C2']]).T
-
-    # learn the propensity score for A1
-    Y = df['A1']
-    # C=np.inf makes sure that the logistic regression doesn't use
-    # a penalty term
-    model_A1 = LogisticRegression(C=np.inf).fit(Xmat, Y)
-    A1_weights = model_A1.predict_proba(Xmat)[:,1]
-
-    Y = df['A2']
-    model_A2 = LogisticRegression(C=np.inf).fit(Xmat, Y)
-    A2_weights = model_A2.predict_proba(Xmat)[:,1]
-    
-    Y = df['A3']
-    model_A3 = LogisticRegression(C=np.inf).fit(Xmat, Y)
-    A3_weights = model_A3.predict_proba(Xmat)[:,1]
-
-    # calculate the weights as a product of the three weights
-    weights = (df['A1'] * A1_weights + (1-df['A1']) * (1-A1_weights)) \
-                * (df['A2'] * A2_weights + (1-df['A2']) * (1-A2_weights)) \
-                * (df['A3'] * A3_weights + (1-df['A3']) * (1-A3_weights))
-    
-    # we want the inverse weights
-    weights = 1 / weights
-
-    # standardize the weights
-    weights_stand = weights / np.mean(weights)
-
-    return weights_stand
-
-def compute_oracle_weights(df):
-    """
-    Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C) using
-    the oracle probabilities of getting assigned treatment.
-    """
-    # calculate the weights as a product of the three weights
-    weights = (df['A1'] * df['p_A1'] + (1-df['A1']) * (1-df['p_A1'])) \
-                * (df['A2'] * df['p_A2'] + (1-df['A2']) * (1-df['p_A2'])) \
-                * (df['A3'] * df['p_A3'] + (1-df['A3']) * (1-df['p_A3']))
-    
-    # we want the inverse weights
-    weights = 1 / weights
-
-    # standardize the weights
-    weights_stand = weights / np.mean(weights)
-
-    return weights_stand
-
-def bic_select_model(df, weights):
-    """
-    Use the BIC score to select a model using a forward search then
-    a backward search.
-    """
-    # define the potential coefficients to add
-    possible_coefs = ['A1', 'A2', 'A3']
-
-    # keep track of the current score and model, which is denoted
-    # by a set containing the coefficients we have added to our
-    # model; we start with just an empty list
-    cur_score = None
-    cur_model = []
-
-    for coef in possible_coefs:
-        model = LinearRegression(weights=weights)
-        # fit a model with the current model, the current coefficient,
-        # and the intercept term
-        Xmat = np.array(df[cur_model + [coef] + ['int']])
-        Y = df['Y']
-        model.fit(Xmat, Y)
-
-        # get the bic score of the model
-        model_score = model.compute_bic()
-        
-        # check if the score of this model is better than the current one
-        if cur_score == None or cur_score > model_score:
-            cur_score = model_score
-            cur_model = cur_model + [coef]
-
-    # keep track of the coefficients that we are removing
-    to_remove = []
-    for coef in cur_model:
-        model = LinearRegression(weights=weights)
-        # fit a model with the current model, without the coefficient to try
-        # removing, and without the coefficients we decided to remove
-        Xmat = np.array(df[list(set(cur_model) - set(to_remove) - set([coef])) + ['int']])
-        Y = df['Y']
-        model.fit(Xmat, Y)
-    
-        # get the bic score of the model
-        model_score = model.compute_bic()
-
-        if cur_score > model_score:
-            cur_score = model_score
-            to_remove = to_remove + [coef]
-
-    final_model = list(set(cur_model) - set(to_remove))
-
-    return final_model
+from regression_classes import *
+from helper_functions import *
 
 def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     """
@@ -401,11 +18,10 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test a normal regression as a baseline
     regression_correct = False
 
-    linear_model = LinearRegression(weights=weights)
+    linear_model = LinearRegression()
     # int refers to the intercept term
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
     Y = df['Y']
-    # to-do: fit the model using a reweighted score instead
     linear_model.fit(Xmat, Y)
     if verbose:
         print('estimated linear regression params:\n', linear_model.params())
@@ -423,10 +39,9 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the penalized score (SCAD)
     penalized_correct = False
 
-    scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
+    scad_model = LinearRegressionSCAD(lambdaa=n**(-0.25))
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
     Y = df['Y']
-    # to-do: fit the model using a reweighted score instead
     scad_model.fit(Xmat, Y)
     if verbose:
         print('estimated scad params:\n', scad_model.params())
@@ -444,9 +59,9 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the adpative LASSO penalized score
     alasso_correct = False
 
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
     Y = df['Y']
-    alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
+    alasso_model = LinearRegressionALASSO(Xmat, Y, lambdaa=n**(-0.25))
     alasso_model.fit(Xmat, Y)
     if verbose:
         print('estimated alasso params:\n', alasso_model.params())
@@ -474,81 +89,91 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     return (regression_correct, penalized_correct, alasso_correct, bic_correct)
 
-if __name__ == "__main__":
-    # set the seed
-    np.random.seed(0)
-
-    diffs = []
+def compare_weights():
+    """
+    Run simulations for comparing the BIC score when we use oracle vs.
+    estimated weights.
+    """
+    model1_diffs = []
+    model2_diffs = []
     bic_comp_ora = []
     bic_comp_est = []
-    sample_sizes = [50, 500, 5000]
+    weights_rmse = []
+    sample_sizes = [50, 500, 1000, 5000, 10000]
 
     # see if can find DGP such that log n as penalty term
     # doesn't work, but sqrt(n) as penalty term works
     for size in sample_sizes:
         df = generate_data(size, 1.5, confounding=True)
 
+        model1 = df[['A1']]
+        model2 = df[['A1', 'A3']]
+
         est_weights = compute_weights(df)
         ora_weights = compute_oracle_weights(df)
 
         rmse = np.sqrt(np.mean((est_weights - ora_weights)**2))
-        print('weights rmse', rmse)
+        weights_rmse.append(rmse)
 
         A = -0.9 * np.sum(est_weights - ora_weights)
         print('A', A)
 
-        ora_model = LinearRegression(weights=ora_weights)
+        ora_model = LinearRegression(weights=ora_weights, penalty=lambda n: n**(1/2))
         # fit a model with all terms
-        Xmat = np.array(df[['A1']])
+        Xmat = np.array(model1)
         Y = df['Y']
-        ora_model.fit(Xmat, Y)
+        ora_model.closedform_fit(Xmat, Y)
 
         # get the bic score of the model
         ora_model_score = ora_model.compute_bic()
 
         # fit a model with all terms
-        Xmat = np.array(df[['A1', 'A2']])
+        Xmat = np.array(model2)
         Y = df['Y']
-        ora_model.fit(Xmat, Y)
+        ora_model.closedform_fit(Xmat, Y)
 
         # get the bic score of the model
         ora_model_score2 = ora_model.compute_bic()
 
-        print('bic_comp_ora', ora_model_score - ora_model_score2)
         bic_comp_ora.append(ora_model_score - ora_model_score2)
 
-        est_model = LinearRegression(weights=est_weights)
+        est_model = LinearRegression(weights=est_weights, penalty=lambda n: n**(1/2))
         # fit a model with all terms
-        Xmat = np.array(df[['A1']])
+        Xmat = np.array(model1)
         Y = df['Y']
-        est_model.fit(Xmat, Y)
+        est_model.closedform_fit(Xmat, Y)
 
         # get the bic score of the model
         est_model_score = est_model.compute_bic()
 
         # fit a model with all terms
-        Xmat = np.array(df[['A1', 'A2']])
+        Xmat = np.array(model2)
         Y = df['Y']
-        est_model.fit(Xmat, Y)
+        est_model.closedform_fit(Xmat, Y)
 
         # get the bic score of the model
         est_model_score2 = est_model.compute_bic()
 
-        print('bic_comp_est', est_model_score - est_model_score2)
         bic_comp_est.append(est_model_score - est_model_score2)
 
-        print('weights diff', est_model_score - ora_model_score)
-        diffs.append(est_model_score - ora_model_score - A)
+        model1_diffs.append(est_model_score - ora_model_score - A)
+
+        model2_diffs.append(est_model_score2 - ora_model_score2 - A)
 
     print('sample sizes', sample_sizes)
     print('oracle bic comp', bic_comp_ora)
     print('estimated bic comp', bic_comp_est)
-    print('oracle and estimated bic comp', diffs)
+    print('model 1 diffs', model1_diffs)
+    print('model 2 diffs', model2_diffs)
+    print('weights rmse', weights_rmse)
+    print('1/sqrt(n)', 1/np.sqrt(sample_sizes))
+ 
+if __name__ == "__main__":
+    # set the seed
+    np.random.seed(0)
 
-    sys.exit()
-    
     # set number of iterations for experiments
-    num_experiments = 100
+    num_experiments = 1
     # define the number of samples
     n = 500
 
