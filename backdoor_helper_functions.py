@@ -39,8 +39,8 @@ def compute_weights(df):
     Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C)
     """
     # get the matrix of confounders
-    Xmat = np.array([df['C']]).T
-    Xmat_wrong = np.array([df['C2']]).T
+    Xmat = df[['C']]
+    Xmat_wrong = df[['C2']]
 
     # learn the propensity score for A1
     Y = df['A1']
@@ -63,7 +63,7 @@ def compute_weights(df):
                 * (df['A3'] * A3_weights + (1-df['A3']) * (1-A3_weights))
     
     # we want the inverse weights
-    weights = 1 / weights
+    weights = 0.5**3 / weights
 
     # standardize the weights
     weights_stand = weights / np.mean(weights)

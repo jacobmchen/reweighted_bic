@@ -1,7 +1,7 @@
 from regression_classes import *
-from helper_functions import *
+from frontdoor_helper_functions import *
 
-def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
+def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     """
     Function for simulating experiments. Need to take in a dataframe.
     For the penalized score, we fit a single regression and see which coefficients
@@ -20,7 +20,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     linear_model = LinearRegression()
     # int refers to the intercept term
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     linear_model.fit(Xmat, Y)
     if verbose:
@@ -40,7 +40,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     penalized_correct = False
 
     scad_model = LinearRegressionSCAD(lambdaa=n**(-0.25))
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     scad_model.fit(Xmat, Y)
     if verbose:
@@ -59,7 +59,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the adpative LASSO penalized score
     alasso_correct = False
 
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     alasso_model = LinearRegressionALASSO(Xmat, Y, lambdaa=n**(-0.25))
     alasso_model.fit(Xmat, Y)
@@ -78,7 +78,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights, lambda n: np.log(n))
+    selected_model = bic_select_model(df_p, weights, lambda n: np.log(n))
     if verbose:
         print('selected bic model, log n penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -87,7 +87,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct_half = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights, lambda n: n**(1/2))
+    selected_model = bic_select_model(df_p, weights, lambda n: n**(1/2))
     if verbose:
         print('selected bic model, n^(1/2) penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -96,7 +96,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct_three_fourths = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights, lambda n: n**(3/4))
+    selected_model = bic_select_model(df_p, weights, lambda n: n**(3/4))
     if verbose:
         print('selected bic model, n^(3/4) penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -107,88 +107,9 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths)
 
-def compare_weights():
-    """
-    Run simulations for comparing the BIC score when we use oracle vs.
-    estimated weights.
-    """
-    model1_diffs = []
-    model2_diffs = []
-    bic_comp_ora = []
-    bic_comp_est = []
-    weights_rmse = []
-    sample_sizes = [50, 500, 1000, 5000, 10000]
-
-    # see if can find DGP such that log n as penalty term
-    # doesn't work, but sqrt(n) as penalty term works
-    for size in sample_sizes:
-        df = generate_data(size, 1.5, confounding=True)
-
-        model1 = df[['A1']]
-        model2 = df[['A1', 'A3']]
-
-        est_weights = compute_weights(df)
-        ora_weights = compute_oracle_weights(df)
-
-        rmse = np.sqrt(np.mean((est_weights - ora_weights)**2))
-        weights_rmse.append(rmse)
-
-        A = -0.9 * np.sum(est_weights - ora_weights)
-        print('A', A)
-
-        ora_model = LinearRegression(weights=ora_weights, penalty=lambda n: n**(1/2))
-        # fit a model with all terms
-        Xmat = np.array(model1)
-        Y = df['Y']
-        ora_model.closedform_fit(Xmat, Y)
-
-        # get the bic score of the model
-        ora_model_score = ora_model.compute_bic()
-
-        # fit a model with all terms
-        Xmat = np.array(model2)
-        Y = df['Y']
-        ora_model.closedform_fit(Xmat, Y)
-
-        # get the bic score of the model
-        ora_model_score2 = ora_model.compute_bic()
-
-        bic_comp_ora.append(ora_model_score - ora_model_score2)
-
-        est_model = LinearRegression(weights=est_weights, penalty=lambda n: n**(1/2))
-        # fit a model with all terms
-        Xmat = np.array(model1)
-        Y = df['Y']
-        est_model.closedform_fit(Xmat, Y)
-
-        # get the bic score of the model
-        est_model_score = est_model.compute_bic()
-
-        # fit a model with all terms
-        Xmat = np.array(model2)
-        Y = df['Y']
-        est_model.closedform_fit(Xmat, Y)
-
-        # get the bic score of the model
-        est_model_score2 = est_model.compute_bic()
-
-        bic_comp_est.append(est_model_score - est_model_score2)
-
-        model1_diffs.append(est_model_score - ora_model_score - A)
-
-        model2_diffs.append(est_model_score2 - ora_model_score2 - A)
-
-    print('sample sizes', sample_sizes)
-    print('oracle bic comp', bic_comp_ora)
-    print('estimated bic comp', bic_comp_est)
-    print('model 1 diffs', model1_diffs)
-    print('model 2 diffs', model2_diffs)
-    print('weights rmse', weights_rmse)
-    print('1/sqrt(n)', 1/np.sqrt(sample_sizes))
- 
 if __name__ == "__main__":
     # set the seed
-    np.random.seed(0)
+    np.random.seed(1)
 
     # set number of iterations for experiments
     num_experiments = 1
@@ -211,14 +132,32 @@ if __name__ == "__main__":
     for i in range(num_experiments):
         print('experiment number:', i)
 
-        df = generate_data(n, 1.5, confounding=run_with_confounding)
+        df = generate_data(n, 3.5, confounding=run_with_confounding)
 
         if run_with_confounding == False:
             weights = np.ones(len(df))
         else:
-            weights = compute_weights(df)
+            # get number of rows in df
+            n = len(df)
 
-        results = run_expr(df, weights, penalized_threshold=0.001, verbose=True)
+            # get a copy of the dataframe
+            df_p = df.copy()
+
+            # generate prime values of the three treatments
+            A1_p = np.random.binomial(1, 0.5, n)
+            A2_p = np.random.binomial(1, 0.5, n)
+            A3_p = np.random.binomial(1, 0.5, n)
+
+            # replace the treatments in df with randomized versions
+            df_p['A1'] = A1_p
+            df_p['A2'] = A2_p
+            df_p['A3'] = A3_p
+
+            weights = compute_weights(df, df_p)
+            oracle_weights = compute_oracle_weights(df, df_p)
+            # print('weights rmse', np.sqrt(np.mean((weights - oracle_weights)**2)))
+
+        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=True)
 
         if results[0] == True:
             linear_correct += 1
@@ -237,7 +176,6 @@ if __name__ == "__main__":
 
         if results[5] == True:
             bic_correct_three_fourths += 1
-
 
     # print out the experimental results
     print('linear percentage:', linear_correct/num_experiments)

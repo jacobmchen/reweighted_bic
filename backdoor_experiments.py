@@ -1,0 +1,249 @@
+from regression_classes import *
+from backdoor_helper_functions import *
+
+def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
+    """
+    Function for simulating experiments. Need to take in a dataframe.
+    For the penalized score, we fit a single regression and see which coefficients
+    in the regression are sufficiently close to 0.
+    For the BIC score, we perform a forward search then a backward search
+    to see which variables to include in the regression.
+
+    The parameter penalized_threshold dictates how small in absolute value a coefficient
+    needs to be to be considered as 0. This method is used in Jaman, et al.
+    """
+    # get the sample size
+    n = len(df)
+
+    # test a normal regression as a baseline
+    regression_correct = False
+
+    linear_model = LinearRegression()
+    # int refers to the intercept term
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Y = df['Y']
+    linear_model.fit(Xmat, Y)
+    if verbose:
+        print('estimated linear regression params:\n', linear_model.params())
+
+    # check if linear model selected the right model (ignore intercept term)
+    selected_param = [False, False, False]
+    for i in range(3):
+        estimated_coef = linear_model.params()[i]
+        if abs(estimated_coef) > penalized_threshold:
+            selected_param[i] = True
+    
+    if selected_param == [True, False, True]:
+        regression_correct = True
+
+    # test the penalized score (SCAD)
+    penalized_correct = False
+
+    scad_model = LinearRegressionSCAD(lambdaa=n**(-0.25))
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Y = df['Y']
+    scad_model.fit(Xmat, Y)
+    if verbose:
+        print('estimated scad params:\n', scad_model.params())
+
+    # check if SCAD model selected the right model (ignore intercept term)
+    selected_param = [False, False, False]
+    for i in range(3):
+        estimated_coef = scad_model.params()[i]
+        if abs(estimated_coef) > penalized_threshold:
+            selected_param[i] = True
+    
+    if selected_param == [True, False, True]:
+        penalized_correct = True
+
+    # test the adpative LASSO penalized score
+    alasso_correct = False
+
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Y = df['Y']
+    alasso_model = LinearRegressionALASSO(Xmat, Y, lambdaa=n**(-0.25))
+    alasso_model.fit(Xmat, Y)
+    if verbose:
+        print('estimated alasso params:\n', alasso_model.params())
+
+    # check if ALASSO model selected the right model (ignore intercept term)
+    selected_param = [False, False, False]
+    for i in range(3):
+        estimated_coef = alasso_model.params()[i]
+        if abs(estimated_coef) > penalized_threshold:
+            selected_param[i] = True
+    
+    if selected_param == [True, False, True]:
+        alasso_correct = True
+
+    bic_correct = False
+    # use the BIC score method to select a model
+    selected_model = bic_select_model(df, weights, lambda n: np.log(n))
+    if verbose:
+        print('selected bic model, log n penalty:\n', selected_model)
+    # verify if BIC selected the right model
+    if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
+        bic_correct = True
+
+    bic_correct_half = False
+    # use the BIC score method to select a model
+    selected_model = bic_select_model(df, weights, lambda n: n**(1/2))
+    if verbose:
+        print('selected bic model, n^(1/2) penalty:\n', selected_model)
+    # verify if BIC selected the right model
+    if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
+        bic_correct_half = True
+
+    bic_correct_three_fourths = False
+    # use the BIC score method to select a model
+    selected_model = bic_select_model(df, weights, lambda n: n**(3/4))
+    if verbose:
+        print('selected bic model, n^(3/4) penalty:\n', selected_model)
+    # verify if BIC selected the right model
+    if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
+        bic_correct_three_fourths = True
+
+    print()
+
+    return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths)
+
+def compare_weights():
+    """
+    Run simulations for comparing the BIC score when we use oracle vs.
+    estimated weights.
+    """
+    model1_diffs = []
+    model2_diffs = []
+    bic_comp_ora = []
+    bic_comp_est = []
+    weights_rmse = []
+    sample_sizes = [50, 500, 1000, 5000, 10000]
+
+    # see if can find DGP such that log n as penalty term
+    # doesn't work, but sqrt(n) as penalty term works
+    for size in sample_sizes:
+        df = generate_data(size, 1.5, confounding=True)
+
+        model1 = df[['A1']]
+        model2 = df[['A1', 'A3']]
+
+        est_weights = compute_weights(df)
+        ora_weights = compute_oracle_weights(df)
+
+        rmse = np.sqrt(np.mean((est_weights - ora_weights)**2))
+        weights_rmse.append(rmse)
+
+        A = -0.9 * np.sum(est_weights - ora_weights)
+        print('A', A)
+
+        ora_model = LinearRegression(weights=ora_weights, penalty=lambda n: n**(1/2))
+        # fit a model with all terms
+        Xmat = np.array(model1)
+        Y = df['Y']
+        ora_model.closedform_fit(Xmat, Y)
+
+        # get the bic score of the model
+        ora_model_score = ora_model.compute_bic()
+
+        # fit a model with all terms
+        Xmat = np.array(model2)
+        Y = df['Y']
+        ora_model.closedform_fit(Xmat, Y)
+
+        # get the bic score of the model
+        ora_model_score2 = ora_model.compute_bic()
+
+        bic_comp_ora.append(ora_model_score - ora_model_score2)
+
+        est_model = LinearRegression(weights=est_weights, penalty=lambda n: n**(1/2))
+        # fit a model with all terms
+        Xmat = np.array(model1)
+        Y = df['Y']
+        est_model.closedform_fit(Xmat, Y)
+
+        # get the bic score of the model
+        est_model_score = est_model.compute_bic()
+
+        # fit a model with all terms
+        Xmat = np.array(model2)
+        Y = df['Y']
+        est_model.closedform_fit(Xmat, Y)
+
+        # get the bic score of the model
+        est_model_score2 = est_model.compute_bic()
+
+        bic_comp_est.append(est_model_score - est_model_score2)
+
+        model1_diffs.append(est_model_score - ora_model_score - A)
+
+        model2_diffs.append(est_model_score2 - ora_model_score2 - A)
+
+    print('sample sizes', sample_sizes)
+    print('oracle bic comp', bic_comp_ora)
+    print('estimated bic comp', bic_comp_est)
+    print('model 1 diffs', model1_diffs)
+    print('model 2 diffs', model2_diffs)
+    print('weights rmse', weights_rmse)
+    print('1/sqrt(n)', 1/np.sqrt(sample_sizes))
+ 
+if __name__ == "__main__":
+    # set the seed
+    np.random.seed(0)
+
+    # set number of iterations for experiments
+    num_experiments = 1
+    # define the number of samples
+    n = 500
+
+    # keep track of how many times scad and bic
+    # are correct
+    linear_correct = 0
+    scad_correct = 0
+    alasso_correct = 0
+    bic_correct = 0
+    bic_correct_half = 0
+    bic_correct_three_fourths = 0
+
+    # set a flag for whether we are running the experiments with confounding
+    run_with_confounding = True
+
+    # run experiments
+    for i in range(num_experiments):
+        print('experiment number:', i)
+
+        df = generate_data(n, 1.5, confounding=run_with_confounding)
+
+        if run_with_confounding == False:
+            weights = np.ones(len(df))
+        else:
+            weights = compute_weights(df)
+
+        results = run_expr(df, weights, penalized_threshold=0.001, verbose=True)
+
+        if results[0] == True:
+            linear_correct += 1
+
+        if results[1] == True:
+            scad_correct += 1
+
+        if results[2] == True:
+            alasso_correct += 1
+
+        if results[3] == True:
+            bic_correct += 1
+
+        if results[4] == True:
+            bic_correct_half += 1
+
+        if results[5] == True:
+            bic_correct_three_fourths += 1
+
+
+    # print out the experimental results
+    print('linear percentage:', linear_correct/num_experiments)
+    print('scad percentage:', scad_correct/num_experiments)
+    print('alasso percentage:', alasso_correct/num_experiments)
+    print('bic percentage, log n penalty:', bic_correct/num_experiments)
+    print('bic percentage, n^(1/2) penalty:', bic_correct_half/num_experiments)
+    print('bic percentage, n^(3/4) penalty:', bic_correct_three_fourths/num_experiments)
+
