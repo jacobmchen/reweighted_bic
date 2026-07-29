@@ -116,7 +116,7 @@ def bic_select_model(df, weights, bic_penalty):
 
         # get the bic score of the model
         model_score = model.compute_bic()
-        
+
         # check if the score of this model is better than the current one
         if cur_score == None or cur_score > model_score:
             cur_score = model_score

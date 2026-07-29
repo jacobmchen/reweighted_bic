@@ -103,18 +103,24 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct_three_fourths = True
 
-    print()
+    if verbose:
+        print()
 
     return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths)
 
 if __name__ == "__main__":
+    # set the seed to the input of the argument, if no input
+    # seed is just 0
+    if len(sys.argv) > 1:
+        seed = sys.argv[1]
+    else:
+        seed = 0
+    
     # set the seed
-    np.random.seed(1)
+    np.random.seed(seed)
 
-    # set number of iterations for experiments
-    num_experiments = 1
     # define the number of samples
-    n = 500
+    samples = [500, 1000, 2500, 5000, 10000, 50000]
 
     # keep track of how many times scad and bic
     # are correct
@@ -129,20 +135,19 @@ if __name__ == "__main__":
     run_with_confounding = True
 
     # run experiments
-    for i in range(num_experiments):
-        print('experiment number:', i)
+    for sample_size in samples:
+        # generate the data
+        df = generate_data(sample_size, 3.5, confounding=run_with_confounding)
 
-        df = generate_data(n, 3.5, confounding=run_with_confounding)
+        # get number of rows in df
+        n = len(df)
+
+        # get a copy of the dataframe
+        df_p = df.copy()
 
         if run_with_confounding == False:
             weights = np.ones(len(df))
         else:
-            # get number of rows in df
-            n = len(df)
-
-            # get a copy of the dataframe
-            df_p = df.copy()
-
             # generate prime values of the three treatments
             A1_p = np.random.binomial(1, 0.5, n)
             A2_p = np.random.binomial(1, 0.5, n)
@@ -157,7 +162,16 @@ if __name__ == "__main__":
             oracle_weights = compute_oracle_weights(df, df_p)
             # print('weights rmse', np.sqrt(np.mean((weights - oracle_weights)**2)))
 
-        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=True)
+        # run the experiments
+        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=False)
+
+        # print the results
+        print(results[0])
+        print(results[1])
+        print(results[2])
+        print(results[3])
+        print(results[4])
+        print(results[5])
 
         if results[0] == True:
             linear_correct += 1
@@ -178,10 +192,10 @@ if __name__ == "__main__":
             bic_correct_three_fourths += 1
 
     # print out the experimental results
-    print('linear percentage:', linear_correct/num_experiments)
-    print('scad percentage:', scad_correct/num_experiments)
-    print('alasso percentage:', alasso_correct/num_experiments)
-    print('bic percentage, log n penalty:', bic_correct/num_experiments)
-    print('bic percentage, n^(1/2) penalty:', bic_correct_half/num_experiments)
-    print('bic percentage, n^(3/4) penalty:', bic_correct_three_fourths/num_experiments)
+    # print('linear percentage:', linear_correct/num_experiments)
+    # print('scad percentage:', scad_correct/num_experiments)
+    # print('alasso percentage:', alasso_correct/num_experiments)
+    # print('bic percentage, log n penalty:', bic_correct/num_experiments)
+    # print('bic percentage, n^(1/2) penalty:', bic_correct_half/num_experiments)
+    # print('bic percentage, n^(3/4) penalty:', bic_correct_three_fourths/num_experiments)
 
