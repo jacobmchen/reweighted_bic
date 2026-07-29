@@ -23,7 +23,6 @@ def generate_data(n, coef, confounding=True):
     # generate the mediator variable M, which is a binary variable
     p_M = expit(5*A1 + 5*A3 - 5)
     M = np.random.binomial(1, p_M, n)
-    print('probability of M', np.mean(M))
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
