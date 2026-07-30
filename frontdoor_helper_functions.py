@@ -26,7 +26,7 @@ def generate_data(n, coef, confounding=True):
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
     if confounding == True:
-        Y = coef*U + coef*M + np.random.normal(0, 1, n)
+        Y = coef*coef*U + coef*M + np.random.normal(0, 1, n)
     else:
         Y = coef*M + np.random.normal(0, 1, n)
 
@@ -65,7 +65,7 @@ def compute_weights(df, df_p):
 
     # compute the pdfs for each observation
     # estimate variance
-    sigma_square_hat = 1/(n-d) * np.sum((M - M_hat)**2)
+    sigma_square_hat = 1/n * np.sum((M - M_hat)**2)
 
     # calculate the densities for denominator
     denom = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat)**2 / (2*sigma_square_hat))
