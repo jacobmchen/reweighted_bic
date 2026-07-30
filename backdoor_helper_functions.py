@@ -108,7 +108,7 @@ def bic_select_model(df, weights, bic_penalty):
         # and the intercept term
         Xmat = np.array(df[cur_model + [coef] + ['int']])
         Y = df['Y']
-        model.fit(Xmat, Y)
+        model.closedform_fit(Xmat, Y)
 
         # get the bic score of the model
         model_score = model.compute_bic()
@@ -126,7 +126,7 @@ def bic_select_model(df, weights, bic_penalty):
         # removing, and without the coefficients we decided to remove
         Xmat = np.array(df[list(set(cur_model) - set(to_remove) - set([coef])) + ['int']])
         Y = df['Y']
-        model.fit(Xmat, Y)
+        model.closedform_fit(Xmat, Y)
     
         # get the bic score of the model
         model_score = model.compute_bic()

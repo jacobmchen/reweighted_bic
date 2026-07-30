@@ -192,7 +192,7 @@ if __name__ == "__main__":
     # set the seed to the input of the argument, if no input
     # seed is just 0
     if len(sys.argv) > 1:
-        seed = sys.argv[1]
+        seed = int(sys.argv[1])
     else:
         seed = 0
     
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # define the number of samples
-    samples = [500, 1000, 2500, 5000, 10000, 50000]
+    samples = [500, 1000, 2500, 5000, 7500, 10000]
 
     # keep track of how many times scad and bic
     # are correct

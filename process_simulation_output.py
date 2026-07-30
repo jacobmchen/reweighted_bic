@@ -1,4 +1,4 @@
-num_experiments = 1
+num_experiments = 200
 
 file_header = 'backdoor'
 
@@ -30,5 +30,15 @@ for i in range(num_experiments):
         # the sample size corresponds i/6, and the method corresponds to i%6
         if output[i] == True:
             results[int(i/6)][i%6] += 1
+
+# print results
+sample_sizes = [500, 1000, 2500, 5000, 7500, 10000]
+methods = ['naive regression', 'SCAD regression', 'ALASSO', 'BIC logn', 'BIC n^(1/2)', 'BIC n^(3/4)']
+
+for i in range(len(sample_sizes)):
+    print('sample size', sample_sizes[i])
+    for j in range(len(methods)):
+        print(methods[j], 'percent correct:', results[i][j]/num_experiments)
+    print()
 
 print(results)

@@ -8,7 +8,7 @@
 ##SBATCH --time=2-00:00:00
 
 # specify the number of tasks in the array
-#SBATCH --array=0-99
+#SBATCH --array=0-199
 
 # name the output and error files
 #SBATCH --output=backdoor-%a.log
@@ -18,7 +18,7 @@
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jchen459@jhu.edu 
 
-module load python3/3.11.8
+module load python/3.11.8
 
 # run the script using the job number as the seed
 python3 backdoor_experiments.py $SLURM_ARRAY_TASK_ID
