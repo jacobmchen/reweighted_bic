@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # run experiments
     for sample_size in samples:
         # generate the data
-        df = generate_data(sample_size, 3.5, confounding=run_with_confounding)
+        df = generate_data(sample_size, 10, confounding=run_with_confounding)
 
         # get number of rows in df
         n = len(df)

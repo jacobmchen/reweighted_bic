@@ -1,6 +1,8 @@
+import pickle
+
 num_experiments = 200
 
-file_header = 'backdoor'
+file_header = 'frontdoor'
 
 # create a list of lists to store results of the simulations
 # the outer layer is a list corresponding to sample size
@@ -42,3 +44,6 @@ for i in range(len(sample_sizes)):
     print()
 
 print(results)
+
+with open('frontdoor_results_coef3.5.pkl', 'wb') as file:
+    pickle.dump(results, file)
