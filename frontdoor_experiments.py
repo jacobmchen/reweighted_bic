@@ -122,6 +122,9 @@ if __name__ == "__main__":
     # define the number of samples
     samples = [500, 1000, 2500, 5000, 7500, 10000]
 
+    # define the coefficient to use in simulating the DGP
+    coef = np.sqrt(1.5)
+
     # keep track of how many times scad and bic
     # are correct
     linear_correct = 0
@@ -137,7 +140,7 @@ if __name__ == "__main__":
     # run experiments
     for sample_size in samples:
         # generate the data
-        df = generate_data(sample_size, 10, confounding=run_with_confounding)
+        df = generate_data(sample_size, coef, confounding=run_with_confounding)
 
         # get number of rows in df
         n = len(df)
@@ -147,6 +150,7 @@ if __name__ == "__main__":
 
         if run_with_confounding == False:
             weights = np.ones(len(df))
+            oracle_weights = np.ones(len(df))
         else:
             # generate prime values of the three treatments
             A1_p = np.random.binomial(1, 0.5, n)
@@ -159,7 +163,7 @@ if __name__ == "__main__":
             df_p['A3'] = A3_p
 
             weights = compute_weights(df, df_p)
-            oracle_weights = compute_oracle_weights(df, df_p)
+            oracle_weights = compute_oracle_weights(df, df_p, coef)
             # print('weights rmse', np.sqrt(np.mean((weights - oracle_weights)**2)))
 
         # run the experiments

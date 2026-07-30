@@ -21,8 +21,7 @@ def generate_data(n, coef, confounding=True):
     intercept = np.ones(n)
 
     # generate the mediator variable M, which is a binary variable
-    p_M = expit(5*A1 + 5*A3 - 5)
-    M = np.random.binomial(1, p_M, n)
+    M = coef*A1 + coef*A3 + np.random.normal(0, 1, n)
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
@@ -48,18 +47,36 @@ def compute_weights(df, df_p):
     # get the matrix of treatments
     Xmat = df[['A1', 'A2', 'A3']]
 
+    # get the dimension of the covariate vector
+    n, d = Xmat.shape
+    # add another 1 to d to account for the intercept term
+    d += 1
+
     # learn the propensity score for M
     M = df['M']
-    # C=np.inf makes sure that the logistic regression doesn't use
-    # a penalty term
-    model_M = LogisticRegression(C=np.inf).fit(Xmat, M)
-    preds = model_M.predict_proba(Xmat)[:,1]
-    denom = df['M'] * preds + (1-df['M']) * (1-preds)
+    linear_model = LinearRegression()
+    linear_model.closedform_fit(Xmat, M)
+
+    # get the estimated parameters from the linear regression 
+    theta_hat = linear_model.params()
+
+    # get the estimates
+    M_hat = np.matmul(Xmat, theta_hat)
+
+    # compute the pdfs for each observation
+    # estimate variance
+    sigma_square_hat = 1/(n-d) * np.sum((M - M_hat)**2)
+
+    # calculate the densities for denominator
+    denom = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat)**2 / (2*sigma_square_hat))
 
     # get the matrix of prime treatments
     Xmat_p = df_p[['A1', 'A2', 'A3']]
-    preds_p = model_M.predict_proba(Xmat_p)[:,1]
-    numer = df['M'] * preds_p + (1-df['M']) * (1-preds_p)
+    # get the estimates for the randomized treatments
+    M_hat_p = np.matmul(Xmat_p, theta_hat)
+
+    # calculate the densities for the numerator
+    numer = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat_p)**2 / (2*sigma_square_hat))
 
     # calculate the weights as a product of the three weights
     weights = 0.5**3 * (numer / denom)
@@ -69,19 +86,23 @@ def compute_weights(df, df_p):
 
     return weights_stand
 
-def compute_oracle_weights(df, df_p):
+def compute_oracle_weights(df, df_p, coef):
     """
     Compute the weights p*(A') p(M | A') / p(M | A) using oracle DGP of M
     df_p is a copy of df except it contains randomized versions of the
     treatment
     """
-    # use the oracle DGP to get the denominator values
-    preds = expit(5*df['A1'] + 5*df['A3'] - 5)
-    denom = df['M'] * preds + (1-df['M']) * (1-preds)
+    # use the oracle DGP to get the means conditional on df values
+    M_hat = coef*df['A1'] + coef*df['A3']
 
-    # use the oracle DGP to get the numerator values
-    preds_p = expit(5*df_p['A1'] + 5*df_p['A3'] - 5)
-    numer = df['M'] * preds_p + (1-df['M']) * (1-preds_p)
+    # calculate the densities for denominator
+    denom = 1 / np.sqrt(2 * np.pi * 1) * np.exp(-(df['M'] - M_hat)**2 / (2*1))
+
+    # use the oracle DGP to get the means conditional on df_p values
+    M_hat_p = coef*df_p['A1'] + coef*df_p['A3']
+
+    # calculate the densities for the numerator
+    numer = 1 / np.sqrt(2 * np.pi * 1) * np.exp(-(df['M'] - M_hat_p)**2 / (2*1))
 
     # calculate the weights as a product of the three weights
     weights = 0.5**3 * (numer / denom)
