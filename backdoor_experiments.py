@@ -223,11 +223,15 @@ if __name__ == "__main__":
         if run_with_confounding == False:
             weights = np.ones(len(df))
         else:
-            weights = compute_weights(df)
-            oracle_weights = compute_oracle_weights(df)
+            # if we get an extra parameter and it is 1, use the oracle weights
+            if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
+                weights = compute_oracle_weights(df)
+            else: 
+                # otherwise, use the estimated weights by default
+                weights = compute_weights(df)
 
         # run the experiments
-        results = run_expr(df, oracle_weights, penalized_threshold=0.001, verbose=False)
+        results = run_expr(df, weights, penalized_threshold=0.001, verbose=False)
 
         # print the results
         print(results[0])

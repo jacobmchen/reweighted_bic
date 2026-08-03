@@ -162,9 +162,12 @@ if __name__ == "__main__":
             df_p['A2'] = A2_p
             df_p['A3'] = A3_p
 
-            weights = compute_weights(df, df_p)
-            oracle_weights = compute_oracle_weights(df, df_p, coef)
-            # print('weights rmse', np.sqrt(np.mean((weights - oracle_weights)**2)))
+            # if we get an extra parameter and it is 1, use the oracle weights
+            if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
+                weights = compute_oracle_weights(df, df_p, coef)
+            else: 
+                # otherwise, use the estimated weights by default
+                weights = compute_weights(df, df_p)
 
         # run the experiments
         results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=True)
