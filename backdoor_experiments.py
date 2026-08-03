@@ -224,9 +224,10 @@ if __name__ == "__main__":
             weights = np.ones(len(df))
         else:
             weights = compute_weights(df)
+            oracle_weights = compute_oracle_weights(df)
 
         # run the experiments
-        results = run_expr(df, weights, penalized_threshold=0.001, verbose=False)
+        results = run_expr(df, oracle_weights, penalized_threshold=0.001, verbose=False)
 
         # print the results
         print(results[0])

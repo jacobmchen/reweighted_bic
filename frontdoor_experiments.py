@@ -18,9 +18,9 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # test a normal regression as a baseline
     regression_correct = False
 
-    linear_model = LinearRegression()
+    linear_model = LinearRegression(weights=weights)
     # int refers to the intercept term
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
+    Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     linear_model.fit(Xmat, Y)
     if verbose:
@@ -39,8 +39,8 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # test the penalized score (SCAD)
     penalized_correct = False
 
-    scad_model = LinearRegressionSCAD(lambdaa=n**(-0.25))
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
+    scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
+    Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     scad_model.fit(Xmat, Y)
     if verbose:
@@ -59,9 +59,9 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # test the adpative LASSO penalized score
     alasso_correct = False
 
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
+    Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    alasso_model = LinearRegressionALASSO(Xmat, Y, lambdaa=n**(-0.25))
+    alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
     alasso_model.fit(Xmat, Y)
     if verbose:
         print('estimated alasso params:\n', alasso_model.params())
@@ -167,7 +167,7 @@ if __name__ == "__main__":
             # print('weights rmse', np.sqrt(np.mean((weights - oracle_weights)**2)))
 
         # run the experiments
-        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=False)
+        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=True)
 
         # print the results
         print(results[0])
