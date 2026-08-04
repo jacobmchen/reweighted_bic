@@ -6,7 +6,7 @@ def generate_data(n, coef, confounding=True):
     coef specifies the strength of the dependency of Y on variables.
     """
     # define a baseline confounder
-    C = np.random.normal(0, 1, n)
+    C = np.random.normal(0, 0.5, n)
     C2 = np.random.normal(1, 5, n)
     
     # define the oracle propensity scores
@@ -88,7 +88,7 @@ def compute_oracle_weights(df):
 
     return weights_stand
 
-def bic_select_model(df, weights, bic_penalty):
+def bic_select_model(df, weights, bic_penalty, verbose=False):
     """
     Use the BIC score to select a model using a forward search then
     a backward search.
@@ -112,6 +112,12 @@ def bic_select_model(df, weights, bic_penalty):
 
         # get the bic score of the model
         model_score = model.compute_bic()
+
+        if verbose:
+            print('compare', cur_model, 'vs.', cur_model+[coef])
+            print(cur_model, 'score:', cur_score)
+            print(cur_model+[coef], 'score:', model_score)
+            print(cur_model+[coef], 'coefs:', model.params())
         
         # check if the score of this model is better than the current one
         if cur_score == None or cur_score > model_score:
@@ -131,11 +137,20 @@ def bic_select_model(df, weights, bic_penalty):
         # get the bic score of the model
         model_score = model.compute_bic()
 
+        if verbose:
+            print('compare', cur_model, 'vs.', list(set(cur_model) - set(to_remove) - set([coef])))
+            print(cur_model, 'score:', cur_score)
+            print(list(set(cur_model) - set(to_remove) - set([coef])), 'score:', model_score)
+            print(list(set(cur_model) - set(to_remove) - set([coef])), 'coefs:', model.params())
+
         if cur_score > model_score:
             cur_score = model_score
             to_remove = to_remove + [coef]
 
     final_model = list(set(cur_model) - set(to_remove))
+
+    if verbose:
+        print()
 
     return final_model
 

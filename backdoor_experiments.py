@@ -19,9 +19,9 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test a normal regression as a baseline
     regression_correct = False
 
-    linear_model = LinearRegression()
+    linear_model = LinearRegression(weights=weights)
     # int refers to the intercept term
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     linear_model.fit(Xmat, Y)
     if verbose:
@@ -40,8 +40,8 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the penalized score (SCAD)
     penalized_correct = False
 
-    scad_model = LinearRegressionSCAD(lambdaa=n**(-0.25))
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     scad_model.fit(Xmat, Y)
     if verbose:
@@ -60,9 +60,9 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the adpative LASSO penalized score
     alasso_correct = False
 
-    Xmat = np.array(df[['A1', 'A2', 'A3', 'C', 'int']])
+    Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    alasso_model = LinearRegressionALASSO(Xmat, Y, lambdaa=n**(-0.25))
+    alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
     alasso_model.fit(Xmat, Y)
     if verbose:
         print('estimated alasso params:\n', alasso_model.params())
@@ -79,7 +79,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights, lambda n: np.log(n))
+    selected_model = bic_select_model(df, weights, lambda n: np.log(n), verbose=verbose)
     if verbose:
         print('selected bic model, log n penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -88,7 +88,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct_half = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights, lambda n: n**(1/2))
+    selected_model = bic_select_model(df, weights, lambda n: n**(1/2), verbose=verbose)
     if verbose:
         print('selected bic model, n^(1/2) penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -97,7 +97,7 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct_three_fourths = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df, weights, lambda n: n**(3/4))
+    selected_model = bic_select_model(df, weights, lambda n: n**(3/4), verbose=verbose)
     if verbose:
         print('selected bic model, n^(3/4) penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -214,8 +214,14 @@ if __name__ == "__main__":
     # set a flag for whether we are running the experiments with confounding
     run_with_confounding = True
 
+    # set a flag for whether to run with verbose
+    verbose = False
+
     # run experiments
     for sample_size in samples:
+        if verbose:
+            print(sample_size)
+
         # generate the data
         df = generate_data(sample_size, 1.5, confounding=run_with_confounding)
 
@@ -231,7 +237,7 @@ if __name__ == "__main__":
                 weights = compute_weights(df)
 
         # run the experiments
-        results = run_expr(df, weights, penalized_threshold=0.001, verbose=False)
+        results = run_expr(df, weights, penalized_threshold=0.001, verbose=verbose)
 
         # print the results
         print(results[0])
