@@ -167,7 +167,7 @@ if __name__ == "__main__":
                 weights = compute_oracle_weights(df, df_p, coef)
             else: 
                 # otherwise, use the estimated weights by default
-                weights = compute_weights(df, df_p)
+                weights = compute_weights(df, df_p, int(sys.argv[2]))
 
         # run the experiments
         results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=False)

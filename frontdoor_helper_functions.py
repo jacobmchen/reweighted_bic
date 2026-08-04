@@ -38,7 +38,7 @@ def generate_data(n, coef, confounding=True):
 
     return df
 
-def compute_weights(df, df_p):
+def compute_weights(df, df_p, half_oracle=0):
     """
     Compute the weights p*(A') p(M | A') / p(M | A)
     df_p is a copy of df except it contains randomized versions of the
@@ -65,7 +65,12 @@ def compute_weights(df, df_p):
 
     # compute the pdfs for each observation
     # estimate variance
-    sigma_square_hat = 1/n * np.sum((M - M_hat)**2)
+    if half_oracle == 2:
+        # if half_oracle is 2, then use the ground truth variance
+        sigma_square_hat = 0.25
+    else:
+        # otherwise, estimate the variance
+        sigma_square_hat = 1/n * np.sum((M - M_hat)**2)
 
     # calculate the densities for denominator
     denom = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat)**2 / (2*sigma_square_hat))
