@@ -75,6 +75,10 @@ def compute_weights(df, df_p):
     # get the estimates for the randomized treatments
     M_hat_p = np.matmul(Xmat_p, theta_hat)
 
+    # compute the pdfs for each observation
+    # estimate variance
+    sigma_square_hat = 1/n * np.sum((M - M_hat_p)**2)
+
     # calculate the densities for the numerator
     numer = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat_p)**2 / (2*sigma_square_hat))
 
@@ -111,13 +115,13 @@ def compute_oracle_weights(df, df_p, coef):
     M_hat = coef*df['A1'] + coef*df['A3']
 
     # calculate the densities for denominator
-    denom = 1 / np.sqrt(2 * np.pi * 1) * np.exp(-(df['M'] - M_hat)**2 / (2*1))
+    denom = 1 / np.sqrt(2 * np.pi * 0.25) * np.exp(-(df['M'] - M_hat)**2 / (2*0.25))
 
     # use the oracle DGP to get the means conditional on df_p values
     M_hat_p = coef*df_p['A1'] + coef*df_p['A3']
 
     # calculate the densities for the numerator
-    numer = 1 / np.sqrt(2 * np.pi * 1) * np.exp(-(df['M'] - M_hat_p)**2 / (2*1))
+    numer = 1 / np.sqrt(2 * np.pi * 0.25) * np.exp(-(df['M'] - M_hat_p)**2 / (2*0.25))
 
     # print('numer/denom max', np.max(numer / denom))
     # print('numer/denom min', np.min(numer / denom))
@@ -142,7 +146,7 @@ def compute_oracle_weights(df, df_p, coef):
 
     return weights_stand
 
-def bic_select_model(df, weights, bic_penalty):
+def bic_select_model(df, weights, bic_penalty, verbose=False):
     """
     Use the BIC score to select a model using a forward search then
     a backward search.
