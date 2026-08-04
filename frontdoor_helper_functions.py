@@ -6,7 +6,7 @@ def generate_data(n, coef, confounding=True):
     coef specifies the strength of the dependency of Y on variables.
     """
     # define a baseline confounder
-    U = np.random.normal(0, 1, n)
+    U = np.random.normal(0, 0.5, n)
     
     # define the oracle propensity scores
     p_A1 = expit(U)
@@ -21,7 +21,7 @@ def generate_data(n, coef, confounding=True):
     intercept = np.ones(n)
 
     # generate the mediator variable M, which is a binary variable
-    M = coef*A1 + coef*A3 + np.random.normal(0, 1, n)
+    M = coef*A1 + coef*A3 + np.random.normal(0, 0.25, n)
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
@@ -78,11 +78,26 @@ def compute_weights(df, df_p):
     # calculate the densities for the numerator
     numer = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat_p)**2 / (2*sigma_square_hat))
 
+    # print('numer/denom max', np.max(numer / denom))
+    # print('numer/denom min', np.min(numer / denom))
+    # print('numer max', np.max(numer))
+    # print('numer min', np.min(numer))
+    # print('denom max', np.max(denom))
+    # print('denom min', np.min(denom))
+
     # calculate the weights as a product of the three weights
     weights = 0.5**3 * (numer / denom)
 
+    # print('weights min', np.min(weights))
+    # print('weights max', np.max(weights))
+    # print('weights sum', np.sum(weights))
+
     # standardize the weights
     weights_stand = weights / np.mean(weights)
+
+    # print('weights_stand min', np.min(weights_stand))
+    # print('weights_stand max', np.max(weights_stand))
+    # print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
@@ -104,11 +119,26 @@ def compute_oracle_weights(df, df_p, coef):
     # calculate the densities for the numerator
     numer = 1 / np.sqrt(2 * np.pi * 1) * np.exp(-(df['M'] - M_hat_p)**2 / (2*1))
 
+    # print('numer/denom max', np.max(numer / denom))
+    # print('numer/denom min', np.min(numer / denom))
+    # print('numer max', np.max(numer))
+    # print('numer min', np.min(numer))
+    # print('denom max', np.max(denom))
+    # print('denom min', np.min(denom))
+
     # calculate the weights as a product of the three weights
     weights = 0.5**3 * (numer / denom)
 
+    # print('weights min', np.min(weights))
+    # print('weights max', np.max(weights))
+    # print('weights sum', np.sum(weights))
+
     # standardize the weights
     weights_stand = weights / np.mean(weights)
+
+    # print('weights_stand min', np.min(weights_stand))
+    # print('weights_stand max', np.max(weights_stand))
+    # print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
