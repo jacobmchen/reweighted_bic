@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 weights = compute_weights(df, df_p)
 
         # run the experiments
-        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=True)
+        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=False)
 
         # print the results
         print(results[0])
