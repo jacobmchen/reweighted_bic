@@ -81,7 +81,7 @@ def compute_oracle_weights(df):
                 * (df['A3'] * df['p_A3'] + (1-df['A3']) * (1-df['p_A3']))
     
     # we want the inverse weights
-    weights = 1 / weights
+    weights = 0.5**3 / weights
 
     # standardize the weights
     weights_stand = weights / np.mean(weights)
