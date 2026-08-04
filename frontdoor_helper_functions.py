@@ -75,10 +75,6 @@ def compute_weights(df, df_p):
     # get the estimates for the randomized treatments
     M_hat_p = np.matmul(Xmat_p, theta_hat)
 
-    # compute the pdfs for each observation
-    # estimate variance
-    sigma_square_hat = 1/n * np.sum((M - M_hat_p)**2)
-
     # calculate the densities for the numerator
     numer = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat_p)**2 / (2*sigma_square_hat))
 
