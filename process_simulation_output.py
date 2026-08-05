@@ -2,7 +2,7 @@ import pickle
 
 num_experiments = 200
 
-file_header = 'frontdoor'
+file_header = 'frontdoor_half_oracle'
 
 # create a list of lists to store results of the simulations
 # the outer layer is a list corresponding to sample size
@@ -45,5 +45,5 @@ for i in range(len(sample_sizes)):
 
 print(results)
 
-with open('frontdoor_results.pkl', 'wb') as file:
+with open('frontdoor_half_oracle_results.pkl', 'wb') as file:
     pickle.dump(results, file)
