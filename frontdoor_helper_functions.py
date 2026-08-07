@@ -1,6 +1,6 @@
 from regression_classes import *
 
-def generate_data(n, coef, confounding=True):
+def generate_data(n, coef, var, confounding=True):
     """
     Function for generating data, need to specify the sample size.
     coef specifies the strength of the dependency of Y on variables.
@@ -21,7 +21,7 @@ def generate_data(n, coef, confounding=True):
     intercept = np.ones(n)
 
     # generate the mediator variable M, which is a binary variable
-    M = coef*A1 + coef*A3 + np.random.normal(0, 0.25, n)
+    M = coef*A1 + coef*A3 + np.random.normal(0, np.sqrt(var), n)
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
@@ -38,14 +38,14 @@ def generate_data(n, coef, confounding=True):
 
     return df
 
-def compute_weights(df, df_p, half_oracle=0):
+def compute_weights(df, df_p, var, half_oracle=0):
     """
     Compute the weights p*(A') p(M | A') / p(M | A)
     df_p is a copy of df except it contains randomized versions of the
     treatment
     """
     # get the matrix of treatments
-    Xmat = df[['A1', 'A2', 'A3']]
+    Xmat = df[['A1', 'A2', 'A3', 'int']]
 
     # get the dimension of the covariate vector
     n, d = Xmat.shape
@@ -59,6 +59,7 @@ def compute_weights(df, df_p, half_oracle=0):
 
     # get the estimated parameters from the linear regression 
     theta_hat = linear_model.params()
+    print(theta_hat)
 
     # get the estimates
     M_hat = np.matmul(Xmat, theta_hat)
@@ -67,16 +68,17 @@ def compute_weights(df, df_p, half_oracle=0):
     # estimate variance
     if half_oracle == 2:
         # if half_oracle is 2, then use the ground truth variance
-        sigma_square_hat = 0.25
+        sigma_square_hat = var
     else:
         # otherwise, estimate the variance
         sigma_square_hat = 1/n * np.sum((M - M_hat)**2)
+        # print('sigma_square_hat', sigma_square_hat)
 
     # calculate the densities for denominator
     denom = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat)**2 / (2*sigma_square_hat))
 
     # get the matrix of prime treatments
-    Xmat_p = df_p[['A1', 'A2', 'A3']]
+    Xmat_p = df_p[['A1', 'A2', 'A3', 'int']]
     # get the estimates for the randomized treatments
     M_hat_p = np.matmul(Xmat_p, theta_hat)
 
@@ -100,13 +102,13 @@ def compute_weights(df, df_p, half_oracle=0):
     # standardize the weights
     weights_stand = weights / np.mean(weights)
 
-    # print('weights_stand min', np.min(weights_stand))
-    # print('weights_stand max', np.max(weights_stand))
-    # print('weights_stand sum', np.sum(weights_stand))
+    print('weights_stand min', np.min(weights_stand))
+    print('weights_stand max', np.max(weights_stand))
+    print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
-def compute_oracle_weights(df, df_p, coef):
+def compute_oracle_weights(df, df_p, coef, var):
     """
     Compute the weights p*(A') p(M | A') / p(M | A) using oracle DGP of M
     df_p is a copy of df except it contains randomized versions of the
@@ -116,13 +118,13 @@ def compute_oracle_weights(df, df_p, coef):
     M_hat = coef*df['A1'] + coef*df['A3']
 
     # calculate the densities for denominator
-    denom = 1 / np.sqrt(2 * np.pi * 0.25) * np.exp(-(df['M'] - M_hat)**2 / (2*0.25))
+    denom = 1 / np.sqrt(2 * np.pi * var) * np.exp(-(df['M'] - M_hat)**2 / (2*var))
 
     # use the oracle DGP to get the means conditional on df_p values
     M_hat_p = coef*df_p['A1'] + coef*df_p['A3']
 
     # calculate the densities for the numerator
-    numer = 1 / np.sqrt(2 * np.pi * 0.25) * np.exp(-(df['M'] - M_hat_p)**2 / (2*0.25))
+    numer = 1 / np.sqrt(2 * np.pi * var) * np.exp(-(df['M'] - M_hat_p)**2 / (2*var))
 
     # print('numer/denom max', np.max(numer / denom))
     # print('numer/denom min', np.min(numer / denom))

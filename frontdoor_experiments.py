@@ -125,6 +125,9 @@ if __name__ == "__main__":
     # define the coefficient to use in simulating the DGP
     coef = np.sqrt(1.5)
 
+    # define the variance to use in simulating the DGP for M
+    var = 5
+
     # keep track of how many times scad and bic
     # are correct
     linear_correct = 0
@@ -140,7 +143,7 @@ if __name__ == "__main__":
     # run experiments
     for sample_size in samples:
         # generate the data
-        df = generate_data(sample_size, coef, confounding=run_with_confounding)
+        df = generate_data(sample_size, coef, var, confounding=run_with_confounding)
 
         # get number of rows in df
         n = len(df)
@@ -164,13 +167,14 @@ if __name__ == "__main__":
 
             # if we get an extra parameter and it is 1, use the oracle weights
             if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
-                weights = compute_oracle_weights(df, df_p, coef)
+                weights = compute_oracle_weights(df, df_p, coef, var)
             else: 
                 # otherwise, use the estimated weights by default
-                weights = compute_weights(df, df_p, int(sys.argv[2]))
+                weights = compute_weights(df, df_p, var, int(sys.argv[2]))
 
         # run the experiments
         results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=False)
+        # results = [0]*6
 
         # print the results
         print(results[0])
@@ -179,30 +183,4 @@ if __name__ == "__main__":
         print(results[3])
         print(results[4])
         print(results[5])
-
-        if results[0] == True:
-            linear_correct += 1
-
-        if results[1] == True:
-            scad_correct += 1
-
-        if results[2] == True:
-            alasso_correct += 1
-
-        if results[3] == True:
-            bic_correct += 1
-
-        if results[4] == True:
-            bic_correct_half += 1
-
-        if results[5] == True:
-            bic_correct_three_fourths += 1
-
-    # print out the experimental results
-    # print('linear percentage:', linear_correct/num_experiments)
-    # print('scad percentage:', scad_correct/num_experiments)
-    # print('alasso percentage:', alasso_correct/num_experiments)
-    # print('bic percentage, log n penalty:', bic_correct/num_experiments)
-    # print('bic percentage, n^(1/2) penalty:', bic_correct_half/num_experiments)
-    # print('bic percentage, n^(3/4) penalty:', bic_correct_three_fourths/num_experiments)
 
