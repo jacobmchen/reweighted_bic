@@ -119,15 +119,15 @@ def compare_weights():
     bic_comp_ora = []
     bic_comp_est = []
     weights_rmse = []
-    sample_sizes = [50, 500, 1000, 5000, 10000]
+    sample_sizes = [100, 1000, 2500, 5000, 7500, 10000, 20000]
 
     # see if can find DGP such that log n as penalty term
     # doesn't work, but sqrt(n) as penalty term works
     for size in sample_sizes:
         df = generate_data(size, 1.5, confounding=True)
 
-        model1 = df[['A1']]
-        model2 = df[['A1', 'A3']]
+        model1 = df[['A1', 'A2', 'int']]
+        model2 = df[['A1', 'int']]
 
         est_weights = compute_weights(df)
         ora_weights = compute_oracle_weights(df)
@@ -136,9 +136,9 @@ def compare_weights():
         weights_rmse.append(rmse)
 
         A = -0.9 * np.sum(est_weights - ora_weights)
-        print('A', A)
+        # print('A', A)
 
-        ora_model = LinearRegression(weights=ora_weights, penalty=lambda n: n**(1/2))
+        ora_model = LinearRegression(weights=ora_weights, penalty=lambda n: np.log(n))
         # fit a model with all terms
         Xmat = np.array(model1)
         Y = df['Y']
@@ -157,7 +157,7 @@ def compare_weights():
 
         bic_comp_ora.append(ora_model_score - ora_model_score2)
 
-        est_model = LinearRegression(weights=est_weights, penalty=lambda n: n**(1/2))
+        est_model = LinearRegression(weights=est_weights, penalty=lambda n: np.log(n))
         # fit a model with all terms
         Xmat = np.array(model1)
         Y = df['Y']
@@ -176,9 +176,9 @@ def compare_weights():
 
         bic_comp_est.append(est_model_score - est_model_score2)
 
-        model1_diffs.append(est_model_score - ora_model_score - A)
+        model1_diffs.append(est_model_score - ora_model_score)
 
-        model2_diffs.append(est_model_score2 - ora_model_score2 - A)
+        model2_diffs.append(est_model_score2 - ora_model_score2)
 
     print('sample sizes', sample_sizes)
     print('oracle bic comp', bic_comp_ora)
@@ -187,6 +187,7 @@ def compare_weights():
     print('model 2 diffs', model2_diffs)
     print('weights rmse', weights_rmse)
     print('1/sqrt(n)', 1/np.sqrt(sample_sizes))
+    print('sqrt(n)', np.sqrt(sample_sizes))
  
 if __name__ == "__main__":
     # set the seed to the input of the argument, if no input

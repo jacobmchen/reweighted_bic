@@ -59,7 +59,6 @@ def compute_weights(df, df_p, var, half_oracle=0):
 
     # get the estimated parameters from the linear regression 
     theta_hat = linear_model.params()
-    print(theta_hat)
 
     # get the estimates
     M_hat = np.matmul(Xmat, theta_hat)
@@ -102,9 +101,9 @@ def compute_weights(df, df_p, var, half_oracle=0):
     # standardize the weights
     weights_stand = weights / np.mean(weights)
 
-    print('weights_stand min', np.min(weights_stand))
-    print('weights_stand max', np.max(weights_stand))
-    print('weights_stand sum', np.sum(weights_stand))
+    # print('weights_stand min', np.min(weights_stand))
+    # print('weights_stand max', np.max(weights_stand))
+    # print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
@@ -174,6 +173,12 @@ def bic_select_model(df, weights, bic_penalty, verbose=False):
         # get the bic score of the model
         model_score = model.compute_bic()
 
+        if verbose:
+            print('compare', cur_model, 'vs.', cur_model+[coef])
+            print(cur_model, 'score:', cur_score)
+            print(cur_model+[coef], 'score:', model_score)
+            print(cur_model+[coef], 'coefs:', model.params())
+
         # check if the score of this model is better than the current one
         if cur_score == None or cur_score > model_score:
             cur_score = model_score
@@ -191,6 +196,12 @@ def bic_select_model(df, weights, bic_penalty, verbose=False):
     
         # get the bic score of the model
         model_score = model.compute_bic()
+
+        if verbose:
+            print('compare', cur_model, 'vs.', list(set(cur_model) - set(to_remove) - set([coef])))
+            print(cur_model, 'score:', cur_score)
+            print(list(set(cur_model) - set(to_remove) - set([coef])), 'score:', model_score)
+            print(list(set(cur_model) - set(to_remove) - set([coef])), 'coefs:', model.params())
 
         if cur_score > model_score:
             cur_score = model_score

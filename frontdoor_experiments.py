@@ -22,7 +22,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # int refers to the intercept term
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    linear_model.fit(Xmat, Y)
+    linear_model.closedform_fit(Xmat, Y)
     if verbose:
         print('estimated linear regression params:\n', linear_model.params())
 
@@ -42,7 +42,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    scad_model.fit(Xmat, Y)
+    scad_model.closedform_fit(Xmat, Y)
     if verbose:
         print('estimated scad params:\n', scad_model.params())
 
@@ -62,7 +62,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
-    alasso_model.fit(Xmat, Y)
+    alasso_model.closedform_fit(Xmat, Y)
     if verbose:
         print('estimated alasso params:\n', alasso_model.params())
 
@@ -78,7 +78,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df_p, weights, lambda n: np.log(n))
+    selected_model = bic_select_model(df_p, weights, lambda n: np.log(n), verbose=verbose)
     if verbose:
         print('selected bic model, log n penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -87,7 +87,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct_half = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df_p, weights, lambda n: n**(1/2))
+    selected_model = bic_select_model(df_p, weights, lambda n: n**(1/2), verbose=verbose)
     if verbose:
         print('selected bic model, n^(1/2) penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -96,7 +96,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
 
     bic_correct_three_fourths = False
     # use the BIC score method to select a model
-    selected_model = bic_select_model(df_p, weights, lambda n: n**(3/4))
+    selected_model = bic_select_model(df_p, weights, lambda n: n**(3/4), verbose=verbose)
     if verbose:
         print('selected bic model, n^(3/4) penalty:\n', selected_model)
     # verify if BIC selected the right model
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     coef = np.sqrt(1.5)
 
     # define the variance to use in simulating the DGP for M
-    var = 5
+    var = 0.25
 
     # keep track of how many times scad and bic
     # are correct
@@ -140,8 +140,13 @@ if __name__ == "__main__":
     # set a flag for whether we are running the experiments with confounding
     run_with_confounding = True
 
+    verbose = False
+
     # run experiments
     for sample_size in samples:
+        if verbose:
+            print('sample size', sample_size)
+
         # generate the data
         df = generate_data(sample_size, coef, var, confounding=run_with_confounding)
 
@@ -173,7 +178,7 @@ if __name__ == "__main__":
                 weights = compute_weights(df, df_p, var, int(sys.argv[2]))
 
         # run the experiments
-        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=False)
+        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=verbose)
         # results = [0]*6
 
         # print the results

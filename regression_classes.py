@@ -228,7 +228,7 @@ class LinearRegressionALASSO(LinearRegression):
         # use Xmat and Y to fit a regular linear regression and set the weights
         # omega
         ols_model = LinearRegression(weights=self.weights)
-        ols_model.fit(Xmat, Y)
+        ols_model.closedform_fit(Xmat, Y)
         ols_params = ols_model.params()
         self.omega = []
         for param in ols_params:
