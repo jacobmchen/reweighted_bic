@@ -1,3 +1,9 @@
+"""
+Create a different version of the frontdoor experiments 
+where all of the experiments are run in sequence rather
+than in parallel from the slurm workload.
+"""
+
 from regression_classes import *
 from frontdoor_helper_functions import *
 
@@ -126,66 +132,76 @@ if __name__ == "__main__":
     coef = np.sqrt(1.5)
 
     # define the variance to use in simulating the DGP for M
-    var = 1
+    var = 3
 
     # keep track of how many times scad and bic
-    # are correct
-    linear_correct = 0
-    scad_correct = 0
-    alasso_correct = 0
-    bic_correct = 0
-    bic_correct_half = 0
-    bic_correct_three_fourths = 0
+    # are correct at different sample sizes
+    linear_correct = [0]*6
+    scad_correct = [0]*6
+    alasso_correct = [0]*6
+    bic_correct = [0]*6
+    bic_correct_half = [0]*6
+    bic_correct_three_fourths = [0]*6
 
     # set a flag for whether we are running the experiments with confounding
     run_with_confounding = True
 
     verbose = False
 
-    # run experiments
-    for sample_size in samples:
-        if verbose:
-            print('sample size', sample_size)
+    # run repetitions of the same simulation
+    for i in range(100):
+        print('experiment number', i)
 
-        # generate the data
-        df = generate_data(sample_size, coef, var, confounding=run_with_confounding)
+        for j in range(len(samples)):
+            # read the sample size we want to simulate
+            sample_size = samples[j]
 
-        # get number of rows in df
-        n = len(df)
+            if verbose:
+                print('sample size', sample_size)
 
-        # get a copy of the dataframe
-        df_p = df.copy()
+            # generate the data
+            df = generate_data(sample_size, coef, var, confounding=run_with_confounding)
 
-        if run_with_confounding == False:
-            weights = np.ones(len(df))
-            oracle_weights = np.ones(len(df))
-        else:
-            # generate prime values of the three treatments
-            A1_p = np.random.binomial(1, 0.5, n)
-            A2_p = np.random.binomial(1, 0.5, n)
-            A3_p = np.random.binomial(1, 0.5, n)
+            # get number of rows in df
+            n = len(df)
 
-            # replace the treatments in df with randomized versions
-            df_p['A1'] = A1_p
-            df_p['A2'] = A2_p
-            df_p['A3'] = A3_p
+            # get a copy of the dataframe
+            df_p = df.copy()
 
-            # if we get an extra parameter and it is 1, use the oracle weights
-            if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
-                weights = compute_oracle_weights(df, df_p, coef, var)
-            else: 
-                # otherwise, use the estimated weights by default
-                weights = compute_weights(df, df_p, var, int(sys.argv[2]))
+            if run_with_confounding == False:
+                weights = np.ones(len(df))
+                oracle_weights = np.ones(len(df))
+            else:
+                # generate prime values of the three treatments
+                A1_p = np.random.binomial(1, 0.5, n)
+                A2_p = np.random.binomial(1, 0.5, n)
+                A3_p = np.random.binomial(1, 0.5, n)
 
-        # run the experiments
-        results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=verbose)
-        # results = [0]*6
+                # replace the treatments in df with randomized versions
+                df_p['A1'] = A1_p
+                df_p['A2'] = A2_p
+                df_p['A3'] = A3_p
 
-        # print the results
-        print(results[0])
-        print(results[1])
-        print(results[2])
-        print(results[3])
-        print(results[4])
-        print(results[5])
+                # if we get an extra parameter and it is 1, use the oracle weights
+                if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
+                    weights = compute_oracle_weights(df, df_p, coef, var)
+                else: 
+                    # otherwise, use the estimated weights by default
+                    weights = compute_weights(df, df_p, var, int(sys.argv[2]))
 
+            # run the experiments
+            results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=verbose)
+            # results = [0]*6
+
+            # save the results
+            linear_correct[j] += int(results[0])
+            scad_correct[j] += int(results[1])
+            alasso_correct[j] += int(results[2])
+            bic_correct[j] += int(results[3])
+            bic_correct_half[j] += int(results[4])
+            bic_correct_three_fourths[j] += int(results[5])
+
+    print('sample sizes', samples)
+    print('bic log n', bic_correct)
+    print('bic n^(1/2)', bic_correct_half)
+    print('bic n^(3/4)', bic_correct_three_fourths)
