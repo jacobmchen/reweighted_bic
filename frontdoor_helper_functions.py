@@ -24,16 +24,16 @@ def generate_data(n, coef, var, confounding=True):
 
     # generate the mediator variable M, which is a binary variable
     M = coef*A1 - coef*A3 + np.random.normal(0, np.sqrt(var), n)
-    print('M mean', np.mean(M))
+    # print('M mean', np.mean(M))
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
     if confounding == True:
         Y = coef*coef*U + coef*M + np.random.normal(0, 1, n)
-        print('Y mean', np.mean(Y))
+        # print('Y mean', np.mean(Y))
     else:
         Y = coef*M + np.random.normal(0, 1, n)
-        print('Y mean', np.mean(Y))
+        # print('Y mean', np.mean(Y))
 
     # create the dataframe, which includes the ground-truth weights that are
     # based on propensity scores
@@ -141,9 +141,9 @@ def compute_oracle_weights(df, df_p, coef, var):
     # standardize the weights
     weights_stand = weights / np.mean(weights)
 
-    print('weights_stand min', np.min(weights_stand))
-    print('weights_stand max', np.max(weights_stand))
-    print('weights_stand sum', np.sum(weights_stand))
+    # print('weights_stand min', np.min(weights_stand))
+    # print('weights_stand max', np.max(weights_stand))
+    # print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
