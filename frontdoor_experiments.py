@@ -22,7 +22,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # int refers to the intercept term
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    linear_model.closedform_fit(Xmat, Y)
+    linear_model.fit(Xmat, Y)
     if verbose:
         print('estimated linear regression params:\n', linear_model.params())
 
@@ -42,7 +42,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    scad_model.closedform_fit(Xmat, Y)
+    scad_model.fit(Xmat, Y)
     if verbose:
         print('estimated scad params:\n', scad_model.params())
 
@@ -62,7 +62,7 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
     alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
-    alasso_model.closedform_fit(Xmat, Y)
+    alasso_model.fit(Xmat, Y)
     if verbose:
         print('estimated alasso params:\n', alasso_model.params())
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     coef = np.sqrt(1.5)
 
     # define the variance to use in simulating the DGP for M
-    var = 1
+    var = 2
 
     # keep track of how many times scad and bic
     # are correct

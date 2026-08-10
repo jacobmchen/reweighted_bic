@@ -73,16 +73,13 @@ def compute_weights(df, df_p, var, half_oracle=0):
         sigma_square_hat = 1/n * np.sum((M - M_hat)**2)
         # print('sigma_square_hat', sigma_square_hat)
 
-    # calculate the densities for denominator
-    denom = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat)**2 / (2*sigma_square_hat))
-
     # get the matrix of prime treatments
     Xmat_p = df_p[['A1', 'A2', 'A3', 'int']]
     # get the estimates for the randomized treatments
     M_hat_p = np.matmul(Xmat_p, theta_hat)
 
-    # calculate the densities for the numerator
-    numer = 1 / np.sqrt(2 * np.pi * sigma_square_hat) * np.exp(-(M - M_hat_p)**2 / (2*sigma_square_hat))
+    # compute the log ratios for the pdf of M
+    log_ratio = -((M - M_hat_p)**2 - (M - M_hat)**2) / (2 * sigma_square_hat)
 
     # print('numer/denom max', np.max(numer / denom))
     # print('numer/denom min', np.min(numer / denom))
@@ -92,7 +89,7 @@ def compute_weights(df, df_p, var, half_oracle=0):
     # print('denom min', np.min(denom))
 
     # calculate the weights as a product of the three weights
-    weights = 0.5**3 * (numer / denom)
+    weights = 0.5**3 * np.exp(log_ratio)
 
     # print('weights min', np.min(weights))
     # print('weights max', np.max(weights))
@@ -116,14 +113,11 @@ def compute_oracle_weights(df, df_p, coef, var):
     # use the oracle DGP to get the means conditional on df values
     M_hat = coef*df['A1'] + coef*df['A3']
 
-    # calculate the densities for denominator
-    denom = 1 / np.sqrt(2 * np.pi * var) * np.exp(-(df['M'] - M_hat)**2 / (2*var))
-
     # use the oracle DGP to get the means conditional on df_p values
     M_hat_p = coef*df_p['A1'] + coef*df_p['A3']
 
-    # calculate the densities for the numerator
-    numer = 1 / np.sqrt(2 * np.pi * var) * np.exp(-(df['M'] - M_hat_p)**2 / (2*var))
+    # compute the log ratio of the pdfs of M
+    log_ratio = -((df['M'] - M_hat_p)**2 - (df['M'] - M_hat)**2) / (2 * var)
 
     # print('numer/denom max', np.max(numer / denom))
     # print('numer/denom min', np.min(numer / denom))
@@ -133,7 +127,7 @@ def compute_oracle_weights(df, df_p, coef, var):
     # print('denom min', np.min(denom))
 
     # calculate the weights as a product of the three weights
-    weights = 0.5**3 * (numer / denom)
+    weights = 0.5**3 * np.exp(log_ratio)
 
     # print('weights min', np.min(weights))
     # print('weights max', np.max(weights))
