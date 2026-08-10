@@ -132,7 +132,7 @@ if __name__ == "__main__":
     coef = np.sqrt(1.5)
 
     # define the variance to use in simulating the DGP for M
-    var = 2
+    var = 2.5
 
     # keep track of how many times scad and bic
     # are correct at different sample sizes
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     verbose = False
 
     # run repetitions of the same simulation
-    for i in range(50):
+    for i in range(10):
         print('experiment number', i)
 
         for j in range(len(samples)):
