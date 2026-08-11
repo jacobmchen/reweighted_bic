@@ -126,7 +126,7 @@ if __name__ == "__main__":
     coef = np.sqrt(1.5)
 
     # define the variance to use in simulating the DGP for M
-    var = 2.5
+    var = 2.875
 
     # keep track of how many times scad and bic
     # are correct
