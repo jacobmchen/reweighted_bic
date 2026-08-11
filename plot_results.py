@@ -9,11 +9,11 @@ sample_sizes = [500, 1000, 2500, 5000, 7500, 10000]
 # backdoor graph use (0.5, 0.14)
 # frontdoor graph use 'best'
 
-legend_loc=(0.5, 0.14)
+legend_loc=(0.03, 0.14)
 
-filename='frontdoor_half_oracle_results.pkl'
+filename='pickle_files/frontdoor_results.pkl'
 
-pngname='frontdoor_half_oracle_graph.pdf'
+pngname='figures/frontdoor_graph.pdf'
 
 # open the backdoor results
 with open(filename, 'rb') as file:
@@ -42,7 +42,7 @@ plt.plot(xpos, bic_n34, marker='o', linestyle='-', label=r'Reweighted BIC; $n^{3
 plt.xticks(xpos, sample_sizes)
 plt.xlabel('Sample Size')
 plt.ylabel(r'Percent Correct Choice of ${\bf A}^*$')
-plt.title(r'Simulation Results for the Frontdoor Graph when Variance of $M$ is Known')
+plt.title(r'Simulation Results for the Frontdoor Graph')
 
 plt.legend(loc=legend_loc)
 
