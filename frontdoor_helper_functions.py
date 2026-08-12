@@ -24,16 +24,13 @@ def generate_data(n, coef, var, confounding=True):
 
     # generate the mediator variable M, which is a binary variable
     M = coef*A1 - coef*A3 + np.random.normal(0, np.sqrt(var), n)
-    # print('M mean', np.mean(M))
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M
     if confounding == True:
         Y = coef*coef*U + coef*M + np.random.normal(0, 1, n)
-        # print('Y mean', np.mean(Y))
     else:
         Y = coef*M + np.random.normal(0, 1, n)
-        # print('Y mean', np.mean(Y))
 
     # create the dataframe, which includes the ground-truth weights that are
     # based on propensity scores
@@ -76,7 +73,6 @@ def compute_weights(df, df_p, var, half_oracle=0):
     else:
         # otherwise, estimate the variance
         sigma_square_hat = 1/n * np.sum((M - M_hat)**2)
-        # print('sigma_square_hat', sigma_square_hat)
 
     # get the matrix of prime treatments
     Xmat_p = df_p[['A1', 'A2', 'A3', 'int']]
@@ -85,27 +81,11 @@ def compute_weights(df, df_p, var, half_oracle=0):
 
     # compute the log ratios for the pdf of M
     log_ratio = -((M - M_hat_p)**2 - (M - M_hat)**2) / (2 * sigma_square_hat)
-
-    # print('numer/denom max', np.max(numer / denom))
-    # print('numer/denom min', np.min(numer / denom))
-    # print('numer max', np.max(numer))
-    # print('numer min', np.min(numer))
-    # print('denom max', np.max(denom))
-    # print('denom min', np.min(denom))
-
     # calculate the weights as a product of the three weights
     weights = 0.5**3 * np.exp(log_ratio)
 
-    # print('weights min', np.min(weights))
-    # print('weights max', np.max(weights))
-    # print('weights sum', np.sum(weights))
-
     # standardize the weights
     weights_stand = weights / np.mean(weights)
-
-    # print('weights_stand min', np.min(weights_stand))
-    # print('weights_stand max', np.max(weights_stand))
-    # print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
@@ -124,26 +104,11 @@ def compute_oracle_weights(df, df_p, coef, var):
     # compute the log ratio of the pdfs of M
     log_ratio = -((df['M'] - M_hat_p)**2 - (df['M'] - M_hat)**2) / (2 * var)
 
-    # print('numer/denom max', np.max(numer / denom))
-    # print('numer/denom min', np.min(numer / denom))
-    # print('numer max', np.max(numer))
-    # print('numer min', np.min(numer))
-    # print('denom max', np.max(denom))
-    # print('denom min', np.min(denom))
-
     # calculate the weights as a product of the three weights
     weights = 0.5**3 * np.exp(log_ratio)
 
-    # print('weights min', np.min(weights))
-    # print('weights max', np.max(weights))
-    # print('weights sum', np.sum(weights))
-
     # standardize the weights
     weights_stand = weights / np.mean(weights)
-
-    # print('weights_stand min', np.min(weights_stand))
-    # print('weights_stand max', np.max(weights_stand))
-    # print('weights_stand sum', np.sum(weights_stand))
 
     return weights_stand
 
@@ -209,72 +174,4 @@ def bic_select_model(df, weights, bic_penalty, verbose=False):
     final_model = list(set(cur_model) - set(to_remove))
 
     return final_model
-
-def bic_select_model_binary(df, weights, bic_penalty, verbose=False):
-    """
-    Use the BIC score to select a model using a forward search then
-    a backward search.
-    """
-    # define the potential coefficients to add
-    possible_coefs = ['A1', 'A2', 'A3']
-
-    # keep track of the current score and model, which is denoted
-    # by a set containing the coefficients we have added to our
-    # model; we start with just an empty list
-    cur_score = None
-    cur_model = []
-
-    for coef in possible_coefs:
-        # fit a model with the current model, the current coefficient,
-        # and the intercept term
-        Xmat = np.array(df[cur_model + [coef] + ['int']])
-        n, d = Xmat.shape
-        Y = df['Y']
-
-        model = LogisticRegression(C=np.inf).fit(Xmat, Y, sample_weight=weights)
-        p_Y = model.predict_proba(Xmat)[:,1]
-
-        # get the bic score of the model
-        model_score = -2 * np.sum(Y*bernoulli.logpmf(1, p_Y) + (1-Y)*bernoulli.logpmf(0, p_Y)) + d * bic_penalty(n)
-
-        if verbose:
-            print('compare', cur_model, 'vs.', cur_model+[coef])
-            print(cur_model, 'score:', cur_score)
-            print(cur_model+[coef], 'score:', model_score)
-            print(cur_model+[coef], 'coefs:', model.coef_)
-
-        # check if the score of this model is better than the current one
-        if cur_score == None or cur_score > model_score:
-            cur_score = model_score
-            cur_model = cur_model + [coef]
-
-    # keep track of the coefficients that we are removing
-    to_remove = []
-    for coef in cur_model:
-        # fit a model with the current model, without the coefficient to try
-        # removing, and without the coefficients we decided to remove
-        Xmat = np.array(df[list(set(cur_model) - set(to_remove) - set([coef])) + ['int']])
-        n, d = Xmat.shape
-        Y = df['Y']
-    
-        model = LogisticRegression(C=np.inf).fit(Xmat, Y, sample_weight=weights)
-        p_Y = model.predict_proba(Xmat)[:,1]
-
-        # get the bic score of the model
-        model_score = -2 * np.sum(Y*bernoulli.logpmf(1, p_Y) + (1-Y)*bernoulli.logpmf(0, p_Y)) + d * bic_penalty(n)
-
-        if verbose:
-            print('compare', cur_model, 'vs.', list(set(cur_model) - set(to_remove) - set([coef])))
-            print(cur_model, 'score:', cur_score)
-            print(list(set(cur_model) - set(to_remove) - set([coef])), 'score:', model_score)
-            print(list(set(cur_model) - set(to_remove) - set([coef])), 'coefs:', model.coef_)
-
-        if cur_score > model_score:
-            cur_score = model_score
-            to_remove = to_remove + [coef]
-
-    final_model = list(set(cur_model) - set(to_remove))
-
-    return final_model
-
 
