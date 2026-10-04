@@ -14,10 +14,6 @@
 #SBATCH --output=frontdoor-%a.log
 #SBATCH --error=frontdoor-%a.err
 
-# email me when the results are available
-#SBATCH --mail-type=FAIL,END
-#SBATCH --mail-user=jchen459@jhu.edu 
-
 module load python/3.11.8
 
 # run the script using the job number as the seed

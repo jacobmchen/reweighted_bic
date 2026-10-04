@@ -1,17 +1,15 @@
 # Code for Experiments of the Reweighted BIC for Model Selection
 
-This repository contains code that runs two simulations that each aim to compare the effectiveness of the reweighted BIC method against penalized regression methods (SCAD and adaptive LASSO) for model selection.
+This repository contains code that runs two simulations that each aim to compare the effectiveness of our proposed reweighted BIC method against penalized regression methods (SCAD and adaptive LASSO) for model selecting direct causes of an outcome.
 
 There are two data-generating processes that we simulate: the backdoor graph and the frontdoor graph.
 
-This README file gives a high-level summary of the files in this repository and how we ran the experiments.
-
-TLDR: 
+This README file gives a high-level summary of the files in this repository and what each of them do.
 
 ## Files Used in Both Simulations
 
-- ```regression_classes.py``` contains classes that implement ordinary least squares regression, linear regression with the SCAD penalty, and linear regression with the adaptive LASSO penalty. The ordinary least squares regression is implemented via both gradient descent and its closed form solution. It also computes the BIC score using various penalty functions. The other regressions are implemented via gradient descent. 
-- ```process_simulation_output.py``` takes the outputs from running the simulations using SLURM and processes them into Python pickle files.
+- ```regression_classes.py``` contains classes that implement ordinary least squares regression, linear regression with the SCAD penalty, and linear regression with the adaptive LASSO penalty. The ordinary least squares regression is implemented via both gradient descent and its closed form solution. The implementation for the ordinary least squares regression also allows for computations of the BIC score using various scalings of the penalty term. The other regressions are implemented via gradient descent. 
+- ```process_simulation_output.py``` takes the outputs from running the simulations and processes them into Python pickle files.
 - ```plot_results.py``` takes the pickle files from above and plots them using matplotlib.
 
 ## The Backdoor Graph
@@ -32,4 +30,4 @@ TLDR:
 
 - The folder ```figures``` contains the outputs of ```plot_results.py```.
 - The folder ```pickle_files``` contains the outputs of ```process_simulation_output.py```.
-- The folder ```other_experiments``` contains code for other experiments we ran that did not contribute to the final simulations.
+- The folder ```other_experiments``` contains code for other experiments we ran that ultimately did not contribute to the final simulations.
