@@ -17,4 +17,4 @@
 module load python/3.11.8
 
 # run the script using the job number as the seed
-python3 backdoor_experiments.py $SLURM_ARRAY_TASK_ID 1
+python3 backdoor_experiments.py $SLURM_ARRAY_TASK_ID 1 1.5 0.5

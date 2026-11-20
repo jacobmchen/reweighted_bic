@@ -1,6 +1,10 @@
 from regression_classes import *
 from frontdoor_helper_functions import *
 
+from skglm import GeneralizedLinearEstimator
+from skglm.penalties import SCAD
+from skglm.datafits import WeightedQuadratic
+
 def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     """
     Function for simulating experiments. Need to take in a dataframe.
@@ -39,17 +43,19 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # test the penalized score (SCAD)
     penalized_correct = False
 
-    scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
+
+    scad_model = GeneralizedLinearEstimator(datafit=WeightedQuadratic(weights.to_numpy()), penalty=SCAD(alpha=n**(-0.25), gamma=3.7))
     scad_model.fit(Xmat, Y)
+    scad_params = scad_model.coef_
     if verbose:
-        print('estimated scad params:\n', scad_model.params())
+        print('estimated scad params:\n', scad_params)
 
     # check if SCAD model selected the right model (ignore intercept term)
     selected_param = [False, False, False]
     for i in range(3):
-        estimated_coef = scad_model.params()[i]
+        estimated_coef = scad_params[i]
         if abs(estimated_coef) > penalized_threshold:
             selected_param[i] = True
     
@@ -61,15 +67,21 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
 
     Xmat = np.array(df_p[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
+    # initialize the adaptive lasso model; set lambda to n^(-1/4), gamma to
+    # 2.0, fit intercept to 0 because we already added a column of 1s, and
+    # do not use a penalty term for the initial regression,
+    # and pass in the weights needed to get rid of confounding bias
+    alasso_model = AdaptiveLasso(alpha=n**(-0.25), gamma=2.0, fit_intercept=False, initial_ridge_alpha=0.0,
+                                 confounding_weights=weights)
     alasso_model.fit(Xmat, Y)
+    alasso_params = alasso_model.coef_
     if verbose:
-        print('estimated alasso params:\n', alasso_model.params())
+        print('estimated alasso params:\n', alasso_params)
 
     # check if ALASSO model selected the right model (ignore intercept term)
     selected_param = [False, False, False]
     for i in range(3):
-        estimated_coef = alasso_model.params()[i]
+        estimated_coef = alasso_params[i]
         if abs(estimated_coef) > penalized_threshold:
             selected_param[i] = True
     
@@ -77,6 +89,8 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
         alasso_correct = True
 
     bic_correct = False
+    bic_choose_A2 = False
+    bic_no_A1_or_A3 = False
     # use the BIC score method to select a model
     selected_model = bic_select_model(df_p, weights, lambda n: np.log(n), verbose=verbose)
     if verbose:
@@ -84,8 +98,16 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct = True
+    # verify if BIC selected A2
+    if 'A2' in selected_model:
+        bic_choose_A2 = True
+    # verify if we failed to select A1 or A3
+    if 'A1' not in selected_model or 'A3' not in selected_model:
+        bic_no_A1_or_A3 = True
 
     bic_correct_half = False
+    bic_choose_A2_half = False
+    bic_no_A1_or_A3_half = False
     # use the BIC score method to select a model
     selected_model = bic_select_model(df_p, weights, lambda n: n**(1/2), verbose=verbose)
     if verbose:
@@ -93,8 +115,16 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct_half = True
+    # verify if BIC selected A2
+    if 'A2' in selected_model:
+        bic_choose_A2_half = True
+    # verify if we failed to select A1 or A3
+    if 'A1' not in selected_model or 'A3' not in selected_model:
+        bic_no_A1_or_A3_half = True
 
     bic_correct_three_fourths = False
+    bic_choose_A2_three_fourths = False
+    bic_no_A1_or_A3_three_fourths = False
     # use the BIC score method to select a model
     selected_model = bic_select_model(df_p, weights, lambda n: n**(3/4), verbose=verbose)
     if verbose:
@@ -102,11 +132,18 @@ def run_expr(df, df_p, weights, penalized_threshold=0.01, verbose=False):
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct_three_fourths = True
+    # verify if BIC selected A2
+    if 'A2' in selected_model:
+        bic_choose_A2_three_fourths = True
+    # verify if we failed to select A1 or A3
+    if 'A1' not in selected_model or 'A3' not in selected_model:
+        bic_no_A1_or_A3_three_fourths = True
 
     if verbose:
         print()
 
-    return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths)
+    return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths,
+            bic_choose_A2, bic_no_A1_or_A3, bic_choose_A2_half, bic_no_A1_or_A3_half, bic_choose_A2_three_fourths, bic_no_A1_or_A3_three_fourths)
 
 if __name__ == "__main__":
     # set the seed to the input of the argument, if no input
@@ -122,11 +159,15 @@ if __name__ == "__main__":
     # define the number of samples
     samples = [500, 1000, 2500, 5000, 7500, 10000]
 
-    # define the coefficient to use in simulating the DGP
-    coef = np.sqrt(1.5)
+    if len(sys.argv) > 4:
+        coef = np.sqrt(float(sys.argv[3]))
+        var = float(sys.argv[4])
+    else:
+        # define the coefficient to use in simulating the DGP
+        coef = np.sqrt(1.5)
 
-    # define the variance to use in simulating the DGP for M
-    var = 2.875
+        # define the variance to use in simulating the DGP for M
+        var = 2.875
 
     # keep track of how many times scad and bic
     # are correct
@@ -140,7 +181,7 @@ if __name__ == "__main__":
     # set a flag for whether we are running the experiments with confounding
     run_with_confounding = True
 
-    verbose = False
+    verbose = True
 
     # run experiments
     for sample_size in samples:
@@ -175,7 +216,7 @@ if __name__ == "__main__":
                 weights = compute_oracle_weights(df, df_p, coef, var)
             else: 
                 # otherwise, use the estimated weights by default
-                weights = compute_weights(df, df_p, var, int(sys.argv[2]))
+                weights = compute_weights(df, df_p, var)
 
         # run the experiments
         results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=verbose)
@@ -188,4 +229,10 @@ if __name__ == "__main__":
         print(results[3])
         print(results[4])
         print(results[5])
+        print(results[6])
+        print(results[7])
+        print(results[8])
+        print(results[9])
+        print(results[10])
+        print(results[11])
 

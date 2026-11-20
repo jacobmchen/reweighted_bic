@@ -44,7 +44,6 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the penalized score (SCAD)
     penalized_correct = False
 
-    # scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
     Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
 
@@ -91,6 +90,8 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
         alasso_correct = True
 
     bic_correct = False
+    bic_choose_A2 = False
+    bic_no_A1_or_A3 = False
     # use the BIC score method to select a model
     selected_model = bic_select_model(df, weights, lambda n: np.log(n), verbose=verbose)
     if verbose:
@@ -98,8 +99,16 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct = True
+    # verify if BIC selected A2
+    if 'A2' in selected_model:
+        bic_choose_A2 = True
+    # verify if we failed to select A1 or A3
+    if 'A1' not in selected_model or 'A3' not in selected_model:
+        bic_no_A1_or_A3 = True
 
     bic_correct_half = False
+    bic_choose_A2_half = False
+    bic_no_A1_or_A3_half = False
     # use the BIC score method to select a model
     selected_model = bic_select_model(df, weights, lambda n: n**(1/2), verbose=verbose)
     if verbose:
@@ -107,8 +116,16 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct_half = True
+    # verify if BIC selected A2
+    if 'A2' in selected_model:
+        bic_choose_A2_half = True
+    # verify if we failed to select A1 or A3
+    if 'A1' not in selected_model or 'A3' not in selected_model:
+        bic_no_A1_or_A3_half = True
 
     bic_correct_three_fourths = False
+    bic_choose_A2_three_fourths = False
+    bic_no_A1_or_A3_three_fourths = False
     # use the BIC score method to select a model
     selected_model = bic_select_model(df, weights, lambda n: n**(3/4), verbose=verbose)
     if verbose:
@@ -116,11 +133,18 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # verify if BIC selected the right model
     if 'A1' in selected_model and 'A3' in selected_model and 'A2' not in selected_model:
         bic_correct_three_fourths = True
+    # verify if BIC selected A2
+    if 'A2' in selected_model:
+        bic_choose_A2_three_fourths = True
+    # verify if we failed to select A1 or A3
+    if 'A1' not in selected_model or 'A3' not in selected_model:
+        bic_no_A1_or_A3_three_fourths = True
 
     if verbose:
         print()
 
-    return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths)
+    return (regression_correct, penalized_correct, alasso_correct, bic_correct, bic_correct_half, bic_correct_three_fourths,
+            bic_choose_A2, bic_no_A1_or_A3, bic_choose_A2_half, bic_no_A1_or_A3_half, bic_choose_A2_three_fourths, bic_no_A1_or_A3_three_fourths)
 
 if __name__ == "__main__":
     # set the seed to the input of the argument, if no input
@@ -135,7 +159,6 @@ if __name__ == "__main__":
 
     # define the number of samples
     samples = [500, 1000, 2500, 5000, 7500, 10000]
-    # samples = [500, 1000, 2500, 5000]
 
     # keep track of how many times scad and bic
     # are correct
@@ -187,4 +210,10 @@ if __name__ == "__main__":
         print(results[3])
         print(results[4])
         print(results[5])
+        print(results[6])
+        print(results[7])
+        print(results[8])
+        print(results[9])
+        print(results[10])
+        print(results[11])
 

@@ -139,8 +139,8 @@ def bic_select_model(df, weights, bic_penalty, verbose=False):
         model_score = model.compute_bic()
 
         if verbose:
-            print('compare', cur_model, 'vs.', list(set(cur_model) - set(to_remove) - set([coef])))
-            print(cur_model, 'score:', cur_score)
+            print('compare', list(set(cur_model) - set(to_remove)), 'vs.', list(set(cur_model) - set(to_remove) - set([coef])))
+            print(list(set(cur_model) - set(to_remove)), 'score:', cur_score)
             print(list(set(cur_model) - set(to_remove) - set([coef])), 'score:', model_score)
             print(list(set(cur_model) - set(to_remove) - set([coef])), 'coefs:', model.params())
 
