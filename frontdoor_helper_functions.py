@@ -23,7 +23,7 @@ def generate_data(n, coef, var, confounding=True):
     intercept = np.ones(n)
 
     # generate the mediator variable M, which is also a normal random variable
-    M = coef*A1 + coef*A3 + np.random.normal(0, np.sqrt(var), n)
+    M = coef*A1 - coef*A3 + np.random.normal(0, np.sqrt(var), n)
 
     # generate Y based on whether we want confounding
     # Y is just a function of U and M

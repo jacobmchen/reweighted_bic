@@ -1,4 +1,5 @@
 import sys
+import pickle
 from regression_classes import *
 from backdoor_helper_functions import *
 
@@ -196,9 +197,17 @@ if __name__ == "__main__":
             # if we get an extra parameter and it is 1, use the oracle weights
             if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
                 weights = compute_oracle_weights(df)
+                oracle = 'oracle_'
             else: 
                 # otherwise, use the estimated weights by default
                 weights = compute_weights(df)
+                oracle = 'no_oracle_'
+
+        if seed == 0 and sample_size == 10000:
+            # save the weights to a pickle file when the sample size is 10000
+            # and the seed is 0
+            with open('pickle_files/backdoor_weights_' + oracle + str(coef) + '_' + str(confounder_variance) + '.pkl', 'wb') as file:
+                pickle.dump(weights, file)
 
         # run the experiments
         results = run_expr(df, weights, penalized_threshold=0.001, verbose=verbose)

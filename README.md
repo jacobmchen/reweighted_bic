@@ -11,6 +11,7 @@ This README file gives a high-level summary of the files in this repository and 
 - ```regression_classes.py``` contains classes that implement ordinary least squares regression, linear regression with the SCAD penalty, and linear regression with the adaptive LASSO penalty. The ordinary least squares regression is implemented via both gradient descent and its closed form solution. The implementation for the ordinary least squares regression also allows for computations of the BIC score using various scalings of the penalty term. The other regressions are implemented via gradient descent. 
 - ```process_simulation_output.py``` takes the outputs from running the simulations and processes them into Python pickle files.
 - ```plot_results.py``` takes the pickle files from above and plots them using matplotlib.
+- ```plot_weights.py``` makes histograms of the frontdoor and backdoor weights based on the parameters used to run the simulations. This is for the purposes of debugging why model selection is inaccurate when weights are inaccurate.
 
 ## The Backdoor Graph
 
