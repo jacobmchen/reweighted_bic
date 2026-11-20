@@ -1,3 +1,4 @@
+import pickle
 from regression_classes import *
 from frontdoor_helper_functions import *
 
@@ -160,6 +161,7 @@ if __name__ == "__main__":
     samples = [500, 1000, 2500, 5000, 7500, 10000]
 
     if len(sys.argv) > 4:
+        coef_square = float(sys.argv[3])
         coef = np.sqrt(float(sys.argv[3]))
         var = float(sys.argv[4])
     else:
@@ -181,7 +183,7 @@ if __name__ == "__main__":
     # set a flag for whether we are running the experiments with confounding
     run_with_confounding = True
 
-    verbose = True
+    verbose = False
 
     # run experiments
     for sample_size in samples:
@@ -214,9 +216,17 @@ if __name__ == "__main__":
             # if we get an extra parameter and it is 1, use the oracle weights
             if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
                 weights = compute_oracle_weights(df, df_p, coef, var)
+                oracle = 'oracle_'
             else: 
                 # otherwise, use the estimated weights by default
                 weights = compute_weights(df, df_p, var)
+                oracle = 'no_oracle_'
+
+        if seed == 0 and sample_size == 10000:
+            # save the weights to a pickle file when the sample size is 10000
+            # and seed is equal to 0
+            with open('pickle_files/frontdoor_weights_' + oracle + str(coef_square) + '_' + str(var) + '.pkl', 'wb') as file:
+                pickle.dump(weights, file)
 
         # run the experiments
         results = run_expr(df, df_p, weights, penalized_threshold=0.001, verbose=verbose)
