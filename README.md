@@ -17,15 +17,13 @@ This README file gives a high-level summary of the files in this repository and 
 
 - ```backdoor_helper_functions.py``` contains code for the data-generating process of the backdoor graph, computing estimated and oracle weights, and code implementing the greedy selection procedure with the reweighted BIC for model selection.
 - ```backdooor_experiments.py``` contains code executing the simulations and evaluating whether each model selects the right model under different sample sizes for one repetition of each sample size. To run this file, we can specify some parameters on the command line. The first parameter is the seed to use for the experiments. The second parameter is a 0 or 1 flag on whether to use the oracle weights. The third and fourth parameters specify the strength of association between treatment and outcome and the variance of the baseline confounder, respectively. The default values are 1.5 and 0.5, respectively.
-- ```backdoor_simulations.sh``` contains shell code for executing 200 instances of the simulations in parallel when using estimated weights. The shell code works for clusters using the SLURM workload manager.
-- ```backdoor_simulations_oracle.sh```contains shell code for the same as above except the weights are oracle weights.
+- ```backdoor_simulations_(.).sh``` contains shell code for executing 200 instances of the simulations in parallel when using estimated weights. The shell code works for clusters using the SLURM workload manager. The (.) in the filename indicates that parameters of the simulations must be specified. We must specify whether to use oracle weights, the coefficient of the true causes, and the variance of the baseline confounder.
 
 ## The Frontdoor Graph
 
 - ```frontdoor_helper_functions.py``` is the analog to ```backdoor_helper_functions.py``` except everything is defined with respect to the frontdoor graph.
 - ```frontdoor_experiments.py``` is the analog to ```backdoor_experiments.py```. It also takes four parameters on the command line. The first parameter is the seed to use for the experiments. The second parameter is a 0 or 1 flag on whether to use the oracle weights. The third and fourth parameters specify the strength of association between treatment and outcome and the variance of the mediator, respectively. The default values are 1.5 and 2.875, respectively.
-- ```frontdoor_simulations.sh``` is the analog to ```backdoor_simulations.sh```.
-- ```frontdoor_simulations_oracle.sh``` is the analog to ```backdoor_simulations_oracle.sh```.
+- ```frontdoor_simulations_(.).sh``` is the analog to ```backdoor_simulations_(.).sh```. Rather than specifying the variance of the baseline confounder though, the last parameter is the variance of the mediator.
 
 ## Miscellaneous Files
 
