@@ -11,10 +11,10 @@
 #SBATCH --array=0-199
 
 # name the output and error files
-#SBATCH --output=frontdoor-%a.log
-#SBATCH --error=frontdoor-%a.err
+#SBATCH --output=frontdoor_oracle_3_6-%a.log
+#SBATCH --error=frontdoor_oracle_3_6-%a.err
 
 module load python/3.11.8
 
 # run the script using the job number as the seed
-python3 frontdoor_experiments.py $SLURM_ARRAY_TASK_ID 0 1.5 2.875
+python3 frontdoor_experiments.py $SLURM_ARRAY_TASK_ID 1 3 6

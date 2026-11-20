@@ -11,8 +11,8 @@
 #SBATCH --array=0-199
 
 # name the output and error files
-#SBATCH --output=frontdoor_oracle-%a.log
-#SBATCH --error=frontdoor_oracle-%a.err
+#SBATCH --output=frontdoor_oracle_1.5_2.875-%a.log
+#SBATCH --error=frontdoor_oracle_1.5_2.875-%a.err
 
 module load python/3.11.8
 
