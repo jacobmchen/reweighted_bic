@@ -4,6 +4,11 @@ import pandas as pd
 from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.linear_model import Lasso, Ridge
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sklearn.preprocessing import StandardScaler
+
 class LinearRegression():
     """
     Class for a simple linear regression using gradient descent
@@ -59,7 +64,7 @@ class LinearRegression():
 
         return grad_vec
 
-    def fit(self, Xmat, Y, max_iterations=1000, tolerance=1e-6, verbose=False):
+    def fit(self, Xmat, Y, max_iterations=1000, tolerance=1e-4, verbose=False):
         """
         Fit a linear regression using gradient descent. The tolerance specifies
         the difference at which we will terminate the program since the theta's
@@ -218,7 +223,7 @@ class LinearRegressionALASSO(LinearRegression):
 
     There is technically another parameter here gamma that dictates the value of omega
     as follows: omega = 1 / abs(param)^gamma. Here, we just use gamma=2. This choice
-    of gamma allows for the choice of lambda_n=n^(-1/4).
+    of gamma allows for the choice of lambda_n=n^(-1/4) and is hard coded.
 
     To get oracle properties, lambda_n/n^(1/2) -> 0 and lambda_n*n^((gamma-1)/2) -> infty
     """
@@ -272,3 +277,126 @@ class LinearRegressionALASSO(LinearRegression):
             grad_vec[j] = gradient
 
         return grad_vec
+
+# Define a class for the adaptive LASSO that uses scikit learn for 
+# optimizing the loss function for more stable learning of coefficients.
+# The implementation below is taken from 
+# https://github.com/ErikHartman/adalasso/blob/main/adalasso/_adaptive_lasso.py.
+# We slightly extend the class to allow for passing in weights for fitting
+# reweighted regressions.
+class AdaptiveLasso(BaseEstimator, RegressorMixin):
+    """Adaptive Lasso linear model.
+
+    Parameters
+    ----------
+    alpha : float, default=1.0
+        Constant that multiplies the penalty term.
+    gamma : float, default=1.0
+        Power parameter for adaptive weights.
+    max_iter : int, default=1000
+        Maximum number of iterations for the solver.
+    tol : float, default=1e-4
+        Tolerance for optimization.
+    fit_intercept : bool, default=True
+        Whether to calculate the intercept for this model.
+    initial_ridge_alpha : float, default=1.0
+        Ridge penalty strength for initial coefficient estimates.
+    max_weight : float, default=100.0
+        Maximum value for adaptive weights to prevent numerical issues.
+    weight_epsilon : float, default=1e-6
+        Small value to avoid division by zero in adaptive weights.
+    random_state : int or None, default=None
+        Seed for reproducibility.
+
+    Attributes
+    ----------
+    coef_ : array, shape (n_features,)
+        Estimated coefficients.
+    intercept_ : float
+        Independent term in decision function.
+    n_iter_ : int
+        Number of iterations run by coordinate descent solver.
+    """
+
+    def __init__(
+        self, alpha=1.0, gamma=1.0, max_iter=1000, tol=1e-4,
+        fit_intercept=True, initial_ridge_alpha=1.0, 
+        max_weight=100.0, weight_epsilon=1e-6, random_state=None,
+        confounding_weights=[]
+    ):
+        self.alpha = alpha
+        self.gamma = gamma
+        self.max_iter = max_iter
+        self.tol = tol
+        self.fit_intercept = fit_intercept
+        self.initial_ridge_alpha = initial_ridge_alpha
+        self.max_weight = max_weight
+        self.weight_epsilon = weight_epsilon
+        self.random_state = random_state
+        # allow the user to pass in weights for a reweighted regression,
+        # we call these weights confounding_weights to avoid confusion
+        # with the adaptive lasso weights used for the penalty term
+        self.confounding_weights = confounding_weights
+
+    def fit(self, X, y):
+        X, y = check_X_y(X, y, accept_sparse='csr', multi_output=False)
+
+        # Center X and y if intercept is used
+        if self.fit_intercept:
+            X_offset = np.mean(X, axis=0)
+            y_offset = np.mean(y)
+            X_centered = X - X_offset
+            y_centered = y - y_offset
+        else:
+            X_offset = np.zeros(X.shape[1])
+            y_offset = 0.0
+            X_centered = X
+            y_centered = y
+
+        # Step 1: Obtain initial coefficient estimates using Ridge regression
+        ridge = Ridge(alpha=self.initial_ridge_alpha, fit_intercept=False)
+        ridge.fit(X_centered, y_centered)
+        initial_coefs = np.abs(ridge.coef_)
+        initial_coefs = np.maximum(initial_coefs, self.weight_epsilon)
+
+        # Step 2: Compute adaptive weights
+        weights = 1.0 / (initial_coefs ** self.gamma)
+
+        # Cap and normalize adaptive weights to prevent numerical instability
+        weights = np.minimum(weights, self.max_weight)
+        weights /= np.mean(weights)
+
+        # Transform features according to adaptive weights
+        X_weighted = X_centered / np.sqrt(weights)
+
+        # Step 3: Fit standard Lasso to transformed features
+        lasso = Lasso(
+            alpha=self.alpha,
+            fit_intercept=False,
+            max_iter=self.max_iter,
+            tol=self.tol,
+            random_state=self.random_state
+        )
+        # check if the user passed in weights that unconfound the distribution
+        if len(self.confounding_weights) > 0:
+            lasso.fit(X_weighted, y_centered)
+        else:
+            lasso.fit(X_weighted, y_centered, sample_weight=self.confounding_weights)
+
+        # Convert coefficients back to original space
+        self.coef_ = lasso.coef_ / np.sqrt(weights)
+
+        # Intercept computation
+        if self.fit_intercept:
+            self.intercept_ = y_offset - np.dot(X_offset, self.coef_)
+        else:
+            self.intercept_ = 0.0
+
+        self.n_iter_ = lasso.n_iter_
+
+        return self
+
+    def predict(self, X):
+        check_is_fitted(self)
+        X = check_array(X, accept_sparse='csr')
+        return X @ self.coef_ + self.intercept_

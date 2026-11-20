@@ -62,15 +62,21 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
 
     Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
-    alasso_model = LinearRegressionALASSO(Xmat, Y, weights=weights, lambdaa=n**(-0.25))
+    # initialize the adaptive lasso model; set lambda to n^(-1/4), gamma to
+    # 2.0, fit intercept to 0 because we already added a column of 1s, and
+    # do not use a penalty term for the initial regression,
+    # and pass in the weights needed to get rid of confounding bias
+    alasso_model = AdaptiveLasso(alpha=n**(-0.25), gamma=2.0, fit_intercept=False, initial_ridge_alpha=0.0,
+                                 confounding_weights=weights)
     alasso_model.fit(Xmat, Y)
+    alasso_params = alasso_model.coef_
     if verbose:
-        print('estimated alasso params:\n', alasso_model.params())
+        print('estimated alasso params:\n', alasso_params)
 
     # check if ALASSO model selected the right model (ignore intercept term)
     selected_param = [False, False, False]
     for i in range(3):
-        estimated_coef = alasso_model.params()[i]
+        estimated_coef = alasso_params[i]
         if abs(estimated_coef) > penalized_threshold:
             selected_param[i] = True
     
@@ -121,7 +127,8 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # define the number of samples
-    samples = [500, 1000, 2500, 5000, 7500, 10000]
+    # samples = [500, 1000, 2500, 5000, 7500, 10000]
+    samples = [500, 1000, 2500, 5000]
 
     # keep track of how many times scad and bic
     # are correct
@@ -136,7 +143,7 @@ if __name__ == "__main__":
     run_with_confounding = True
 
     # set a flag for whether to run with verbose
-    verbose = False
+    verbose = True
 
     # run experiments
     for sample_size in samples:
