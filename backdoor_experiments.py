@@ -173,7 +173,7 @@ if __name__ == "__main__":
     run_with_confounding = True
 
     # set a flag for whether to run with verbose
-    verbose = True
+    verbose = False
 
     # run experiments
     for sample_size in samples:
