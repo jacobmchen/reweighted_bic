@@ -1,12 +1,13 @@
 from regression_classes import *
 
-def generate_data(n, coef, confounding=True):
+def generate_data(n, coef, confounder_variance, confounding=True):
     """
     Function for generating data, need to specify the sample size.
     coef specifies the strength of the dependency of Y on variables.
+    confounder_variance specifies the variance of the baseline confounder.
     """
     # define a baseline confounder
-    C = np.random.normal(0, 0.5, n)
+    C = np.random.normal(0, confounder_variance, n)
     C2 = np.random.normal(1, 5, n)
     
     # define the oracle propensity scores

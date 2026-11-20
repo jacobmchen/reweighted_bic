@@ -2,6 +2,10 @@ import sys
 from regression_classes import *
 from backdoor_helper_functions import *
 
+from skglm import GeneralizedLinearEstimator
+from skglm.penalties import SCAD
+from skglm.datafits import WeightedQuadratic
+
 def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     """
     Function for simulating experiments. Need to take in a dataframe.
@@ -40,17 +44,20 @@ def run_expr(df, weights, penalized_threshold=0.01, verbose=False):
     # test the penalized score (SCAD)
     penalized_correct = False
 
-    scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
+    # scad_model = LinearRegressionSCAD(weights=weights, lambdaa=n**(-0.25))
     Xmat = np.array(df[['A1', 'A2', 'A3', 'int']])
     Y = df['Y']
+
+    scad_model = GeneralizedLinearEstimator(datafit=WeightedQuadratic(weights.to_numpy()), penalty=SCAD(alpha=n**(-0.25), gamma=3.7))
     scad_model.fit(Xmat, Y)
+    scad_params = scad_model.coef_
     if verbose:
-        print('estimated scad params:\n', scad_model.params())
+        print('estimated scad params:\n', scad_params)
 
     # check if SCAD model selected the right model (ignore intercept term)
     selected_param = [False, False, False]
     for i in range(3):
-        estimated_coef = scad_model.params()[i]
+        estimated_coef = scad_params[i]
         if abs(estimated_coef) > penalized_threshold:
             selected_param[i] = True
     
@@ -127,8 +134,8 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     # define the number of samples
-    # samples = [500, 1000, 2500, 5000, 7500, 10000]
-    samples = [500, 1000, 2500, 5000]
+    samples = [500, 1000, 2500, 5000, 7500, 10000]
+    # samples = [500, 1000, 2500, 5000]
 
     # keep track of how many times scad and bic
     # are correct
@@ -150,8 +157,14 @@ if __name__ == "__main__":
         if verbose:
             print(sample_size)
 
-        # generate the data
-        df = generate_data(sample_size, 1.5, confounding=run_with_confounding)
+        if len(sys.argv) > 4:
+            coef = float(sys.argv[3])
+            confounder_variance = float(sys.argv[4])
+            # generate the data with 1.5 as the coef and 0.5 as the confounder variance
+            df = generate_data(sample_size, coef, confounder_variance, confounding=run_with_confounding)
+        else:
+            # generate the data with 1.5 as the coef and 0.5 as the confounder variance
+            df = generate_data(sample_size, 1.5, 0.5, confounding=run_with_confounding)
 
         # specify whether we run with confounding
         if run_with_confounding == False:

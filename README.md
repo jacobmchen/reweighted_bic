@@ -15,7 +15,7 @@ This README file gives a high-level summary of the files in this repository and 
 ## The Backdoor Graph
 
 - ```backdoor_helper_functions.py``` contains code for the data-generating process of the backdoor graph, computing estimated and oracle weights, and code implementing the greedy selection procedure with the reweighted BIC for model selection.
-- ```backdooor_experiments.py``` contains code executing the simulations and evaluating whether each model selects the right model under different sample sizes for one repetition of each sample size.
+- ```backdooor_experiments.py``` contains code executing the simulations and evaluating whether each model selects the right model under different sample sizes for one repetition of each sample size. To run this file, we can specify some parameters on the command line. The first parameter is the seed to use for the experiments. The second parameter is a 0 or 1 flag on whether to use the oracle weights. The third and fourth parameters specify the strength of association between treatment and outcome and the variance of the baseline confounder, respectively. The default values are 1.5 and 0.5, respectively.
 - ```backdoor_simulations.sh``` contains shell code for executing 200 instances of the simulations in parallel when using estimated weights. The shell code works for clusters using the SLURM workload manager.
 - ```backdoor_simulations_oracle.sh```contains shell code for the same as above except the weights are oracle weights.
 
