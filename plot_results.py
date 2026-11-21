@@ -49,7 +49,7 @@ plt.plot(xpos, bic_n34, marker='o', linestyle='-', label=r'Reweighted BIC; $n^{3
 plt.xticks(xpos, sample_sizes)
 plt.xlabel('Sample Size')
 plt.ylabel(r'Percent Correct Choice of ${\bf A}^*$')
-plt.title('Simulation Results for the ' + title_words + ' Graph')
+plt.title('Simulation Results for ' + title_words.replace('_', ' '))
 
 plt.legend(loc=legend_loc)
 
@@ -78,7 +78,7 @@ plt.plot(xpos, n34_no_A1_A3, marker='o', linestyle='-', label=r'$n^{3/4}$: Did n
 plt.xticks(xpos, sample_sizes)
 plt.xlabel('Sample Size')
 plt.ylabel(r'Percent of Event')
-plt.title(r'Reasons for wrong choice of ${\bf A}^*$ in the ' + title_words + 'Graph')
+plt.title(r'Reasons for wrong choice of ${\bf A}^*$ in ' + title_words.replace('_', ' '))
 
 plt.legend(loc=legend_loc)
 
