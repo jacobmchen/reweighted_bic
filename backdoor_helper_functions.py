@@ -89,7 +89,7 @@ def compute_oracle_weights(df):
 
     return weights_stand
 
-def clip_weights(weights, thresh=20):
+def clip_weights(weights, thresh=12):
     """
     Given an array of weights, clip them such that any values greater than 
     thresh are reduced to thresh.
