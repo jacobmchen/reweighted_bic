@@ -89,6 +89,15 @@ def compute_oracle_weights(df):
 
     return weights_stand
 
+def clip_weights(weights, thresh=20):
+    """
+    Given an array of weights, clip them such that any values greater than 
+    thresh are reduced to thresh.
+    """
+    clipped_weights = np.clip(weights, None, thresh)
+
+    return clipped_weights
+
 def bic_select_model(df, weights, bic_penalty, verbose=False):
     """
     Use the BIC score to select a model using a forward search then
