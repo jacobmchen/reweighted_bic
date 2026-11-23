@@ -35,7 +35,7 @@ def generate_data(n, coef, confounder_variance, confounding=True):
 
     return df
 
-def compute_weights(df):
+def compute_weights(df, clip=False):
     """
     Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C)
     """
@@ -62,6 +62,10 @@ def compute_weights(df):
     weights = (df['A1'] * A1_weights + (1-df['A1']) * (1-A1_weights)) \
                 * (df['A2'] * A2_weights + (1-df['A2']) * (1-A2_weights)) \
                 * (df['A3'] * A3_weights + (1-df['A3']) * (1-A3_weights))
+
+    if clip:
+        # clip weights away from extreme values
+        weights = np.clip(weights, 0.01, 0.99)
     
     # we want the inverse weights
     weights = 0.5**3 / weights
@@ -71,7 +75,7 @@ def compute_weights(df):
 
     return weights_stand
 
-def compute_oracle_weights(df):
+def compute_oracle_weights(df, clip=False):
     """
     Compute the weights p(A1, A2, A3 | C) = p(A1 | C)p(A2 | C)p(A3 | C) using
     the oracle probabilities of getting assigned treatment.
@@ -80,6 +84,10 @@ def compute_oracle_weights(df):
     weights = (df['A1'] * df['p_A1'] + (1-df['A1']) * (1-df['p_A1'])) \
                 * (df['A2'] * df['p_A2'] + (1-df['A2']) * (1-df['p_A2'])) \
                 * (df['A3'] * df['p_A3'] + (1-df['A3']) * (1-df['p_A3']))
+
+    if clip:
+        # clip weights away from extreme values
+        weights = np.clip(weights, 0.01, 0.99)
     
     # we want the inverse weights
     weights = 0.5**3 / weights
@@ -88,15 +96,6 @@ def compute_oracle_weights(df):
     weights_stand = weights / np.mean(weights)
 
     return weights_stand
-
-def clip_weights(weights, thresh=12):
-    """
-    Given an array of weights, clip them such that any values greater than 
-    thresh are reduced to thresh.
-    """
-    clipped_weights = np.clip(weights, None, thresh)
-
-    return clipped_weights
 
 def bic_select_model(df, weights, bic_penalty, verbose=False):
     """

@@ -190,25 +190,26 @@ if __name__ == "__main__":
             # generate the data with 1.5 as the coef and 0.5 as the confounder variance
             df = generate_data(sample_size, 1.5, 0.5, confounding=run_with_confounding)
 
+        # check if we are clipping the weights
+        if len(sys.argv) > 5 and sys.argv[5] == "clip":
+            clip = '_clip'
+            clip_flag = True
+        else:
+            clip = ''
+            clip_flag = False
+
         # specify whether we run with confounding
         if run_with_confounding == False:
             weights = np.ones(len(df))
         else:
             # if we get an extra parameter and it is 1, use the oracle weights
             if len(sys.argv) > 2 and int(sys.argv[2]) == 1:
-                weights = compute_oracle_weights(df)
+                weights = compute_oracle_weights(df, clip_flag)
                 oracle = 'oracle_'
             else: 
                 # otherwise, use the estimated weights by default
-                weights = compute_weights(df)
+                weights = compute_weights(df, clip_flag)
                 oracle = 'no_oracle_'
-
-        # check if we are clipping the weights
-        if len(sys.argv) > 5 and sys.argv[5] == "clip":
-            weights = clip_weights(weights)
-            clip = '_clip'
-        else:
-            clip = ''
 
         if seed == 0 and sample_size == 10000:
             # save the weights to a pickle file when the sample size is 10000
